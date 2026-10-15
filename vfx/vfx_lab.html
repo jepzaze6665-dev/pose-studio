@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VFX Lab</title>
+<style>
+:root{--bg:#14121f;--panel:#1e1b2e;--line:#2e2a45;--text:#ece8ff;--dim:#9a93bd;--acc:#ff5a7a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Segoe UI",Tahoma,sans-serif}
+.wrap{display:flex;gap:16px;padding:16px;flex-wrap:wrap;justify-content:center}
+canvas#view{background:#0d0c16;border-radius:12px;max-width:100%;height:auto;border:1px solid var(--line)}
+.side{width:320px;max-width:100%;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+h1{font-size:18px;margin:0 0 4px}
+.sub{color:var(--dim);font-size:13px}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+button{background:#2a2640;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;font-size:13px}
+button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+label{font-size:13px;color:var(--dim);display:flex;justify-content:space-between}
+input[type=range]{width:100%}
+ol{margin:6px 0 0;padding-left:20px;font-size:13px;line-height:1.6}
+ol li.cur{color:var(--acc);font-weight:600}
+ol li.off{color:#5c5680}
+.tag{display:inline-block;font-size:11px;border:1px solid #5b5390;color:#b9b0ff;border-radius:99px;padding:0 6px;margin-left:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <canvas id="view" width="720" height="540"></canvas>
+  <div class="side">
+    <div class="card">
+      <h1>VFX Lab — สูตรโล่เลือด 8 ขั้น</h1>
+      <div class="sub">ตัวต่อชุดเดียวกัน สลับสี/รูปทรง/ความหมายของพารามิเตอร์ ได้เอฟเฟคใหม่</div>
+    </div>
+    <div class="card">
+      <div class="row" id="modes">
+        <button data-m="1" class="on">❄ โล่น้ำแข็ง</button>
+        <button data-m="2">🌀 พอร์ทัล</button>
+        <button data-m="0">🩸 โล่เลือด (ต้นฉบับ)</button>
+      </div>
+    </div>
+    <div class="card">
+      <label>แสดงถึงขั้นที่ <b id="stepv">8</b></label>
+      <input id="step" type="range" min="1" max="8" step="1" value="8">
+      <ol id="steps"></ol>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:8px">
+        <button id="auto" class="on">▶ เล่นวน: เกิด → ยืน → ระเบิด</button>
+      </div>
+      <label><span id="plabel">พารามิเตอร์หลัก</span><b id="pv">1.00</b></label>
+      <input id="open" type="range" min="0" max="1" step="0.01" value="1">
+      <label style="margin-top:8px"><span>15 fps + boil (ฟีลอนิเมะ)</span><input id="boil" type="checkbox" checked></label>
+    </div>
+  </div>
+</div>
+<script>
+const STEPS = {
+  0:[["ร่างลูกบอล","sphere · camera 20°"],["ลายหินอ่อน","fbm · domain warp"],["ลงสีเรียบ 5 สี","flat tones"],["จุดฟอง","Voronoi"],["เจาะรูกลางฟอง","dissolve · rim"],["แยกแผ่นหน้า-หลัง","back/front"],["แสงเรือง","bloom additive"],["ทำให้ขยับ","hole size · boil"]],
+  1:[["ร่างโดมน้ำแข็ง","sphere · camera 20°"],["ลายฝ้าเกล็ดน้ำแข็ง","fbm · warp อ่อน"],["ลงสีเรียบ 5 ฟ้า","flat tones"],["ผลึกเหลี่ยม","Voronoi = facet"],["ขอบผลึก + แตกหลุด","dissolve ทีละเซลล์"],["แยกแผ่นหน้า-หลัง","back/front"],["แสงเรืองเฉพาะขอบ","bloom additive"],["ทำให้ขยับ","shatter · boil"]],
+  2:[["ร่างวงบนพื้น","ellipse · camera 20°"],["วังวนหมุน","polar · domain warp"],["ลงสีเรียบ 5 ม่วง","flat tones"],["เศษรูน","Voronoi polar"],["เปิดรูกลางวง","dissolve · rim"],["ครึ่งไกล-ครึ่งใกล้","back/front"],["แสงเรือง","bloom additive"],["ทำให้ขยับ","open radius · boil"]]
+};
+const PLABEL={0:"ขนาดรู (0=ลูกเต็ม → 1=ใย)",1:"ความแข็งแรง (0=แตกหมด → 1=เต็มลูก)",2:"ความกว้างประตู (0=ปิด → 1=เปิด)"};
+
+const fs = `
+precision highp float;
+uniform vec2 res; uniform float t; uniform float mode; uniform float layer; uniform float glow;
+uniform float openP; uniform float stepN; uniform float burst; uniform float boilOn;
+float h31(vec3 p){p=fract(p*.1031);p+=dot(p,p.zyx+31.32);return fract((p.x+p.y)*p.z);}
+vec3 h33(vec3 p){p=vec3(dot(p,vec3(127.1,311.7,74.7)),dot(p,vec3(269.5,183.3,246.1)),dot(p,vec3(113.5,271.9,124.6)));return fract(sin(p)*43758.5453);}
+float vn(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+ return mix(mix(mix(h31(i),h31(i+vec3(1,0,0)),f.x),mix(h31(i+vec3(0,1,0)),h31(i+vec3(1,1,0)),f.x),f.y),
+            mix(mix(h31(i+vec3(0,0,1)),h31(i+vec3(1,0,1)),f.x),mix(h31(i+vec3(0,1,1)),h31(i+vec3(1,1,1)),f.x),f.y),f.z);}
+float fbm(vec3 p){float a=.5,s=0.;for(int i=0;i<5;i++){s+=a*vn(p);p*=2.03;a*=.5;}return s;}
+vec3 vor(vec3 p){vec3 i=floor(p),f=fract(p);float d1=9.,d2=9.,id=0.;
+ for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)for(int z=-1;z<=1;z++){
+  vec3 g=vec3(float(x),float(y),float(z));vec3 r=g+h33(i+g)-f;float d=dot(r,r);
+  if(d<d1){d2=d1;d1=d;id=h31(i+g);}else if(d<d2){d2=d;}}
+ return vec3(sqrt(d1),sqrt(d2)-sqrt(d1),id);}
+vec3 pal(float m,float k){ // 5 flat tones per mode, k=0..4 dark->light
+ if(m<.5){ if(k<.5)return vec3(.42,.03,.09); if(k<1.5)return vec3(.80,.10,.20); if(k<2.5)return vec3(1.,.38,.45); if(k<3.5)return vec3(1.,.66,.55); return vec3(1.,.90,.78);}
+ if(m<1.5){ if(k<.5)return vec3(.05,.16,.38); if(k<1.5)return vec3(.12,.40,.72); if(k<2.5)return vec3(.35,.70,.95); if(k<3.5)return vec3(.68,.90,1.); return vec3(.93,.98,1.);}
+ if(k<.5)return vec3(.12,.03,.25); if(k<1.5)return vec3(.38,.10,.62); if(k<2.5)return vec3(.68,.25,.95); if(k<3.5)return vec3(.35,.85,1.); return vec3(.92,.85,1.);}
+vec3 grad(float m,float v){ // smooth (step<3) gray
+ return vec3(v);}
+mat2 rot(float a){float c=cos(a),s=sin(a);return mat2(c,-s,s,c);}
+void main(){
+ vec2 uv=(gl_FragCoord.xy-.5*res)/res.y;
+ float fr=floor(t*15.)/15.; float tt=boilOn>.5?fr:t;
+ float jit=boilOn>.5?h31(vec3(floor(t*15.),1.,2.))*.06:0.;
+ float scale=1.+burst*.45; uv/=scale;
+ vec3 col=vec3(0.); float a=0.; float bright=0.;
+ if(mode<1.5){
+  // ---------- DOME (blood / ice) ----------
+  vec2 c=vec2(0.,-.06); float R=.34;
+  vec2 q=(uv-c)/R; float r2=dot(q,q);
+  if(r2>1.){ gl_FragColor=vec4(0.); return; }
+  float zs=sqrt(1.-r2)*(layer>.5?1.:-1.);
+  float h=q.y*.94+zs*.34; if(h<-.62){gl_FragColor=vec4(0.);return;}
+  vec3 N=vec3(q,zs);
+  vec3 Np=N; Np.xz=rot(tt*.25)*Np.xz;
+  float shade=.62+.38*clamp(dot(N,normalize(vec3(-.5,.7,.6))),0.,1.);
+  // step1
+  col=vec3(.82,.80,.92)*shade; a=layer>.5?.55:.35;
+  if(stepN>=2.){
+   vec3 p=Np*(mode<.5?1.8:2.4)+jit;
+   vec3 w=vec3(fbm(p),fbm(p+5.2),fbm(p+9.1));
+   float v;
+   if(mode<.5){ float m=fbm(p+2.6*w); v=.5+.5*sin(m*14.); }
+   else { float m=fbm(p*1.3+1.1*w); v=clamp(m*1.5-.32+.3*(1.-abs(zs)),0.,1.); }
+   col=vec3(v)*shade; a=1.;
+   if(stepN>=3.){ float k=floor(clamp(v,0.,.999)*5.); col=pal(mode,k); bright=mode<.5?step(.5,k)*step(k,2.5):0.; }
+   if(stepN>=4.){
+    vec3 vo=vor(Np*2.1+jit*.5);
+    if(mode>.5){ // ice: facets -> flat brightness per cell
+     if(stepN>=3.){ col*=.78+.4*vo.z; }
+     float e=smoothstep(.06,.0,vo.y);
+     if(stepN<5.){ col=mix(col,vec3(.05,.05,.12),e*.8); }
+     else {
+      col=mix(col,vec3(.95,1.,1.),e); bright=max(bright,e);
+      // shatter: cells dissolve when id > open
+      float thr=openP; float d=vo.z-thr;
+      if(d>0.){ gl_FragColor=vec4(0.); return; }
+      if(d>-.06){ col=mix(vec3(.6,.95,1.),vec3(1.),step(-.03,d)); bright=1.; }
+      // fresnel rim
+      float fr2=pow(1.-abs(zs),3.); col+=vec3(.5,.8,1.)*fr2*.6; bright=max(bright,fr2);
+     }
+     a=(layer>.5&&stepN>=5.)?mix(.42,.95,e):1.;
+     bright*=.7;
+    } else { // blood
+     float e=smoothstep(.05,.0,vo.y);
+     if(stepN<5.){ col=mix(col,vec3(.08,.02,.05),e*.85); }
+     else {
+      float thr=mix(1.6,.14,openP);
+      float d=thr-vo.y;
+      if(d<0.){ gl_FragColor=vec4(0.); return; }
+      if(d<.035) col=vec3(.42,.03,.09); else if(d<.08) col=vec3(.85,.12,.22); else if(d<.13) col=vec3(1.,.42,.5);
+      if(d<.13) bright=1.;
+     }
+    }
+   }
+   if(layer<.5) col*=.62; // back sheet darker
+  }
+ } else {
+  // ---------- PORTAL (ground ring) ----------
+  float cy=-.30; vec2 g=vec2(uv.x,(uv.y-cy)/.34);
+  float Rp=.42; float rho=length(g)/Rp; float ang=atan(g.y,g.x);
+  if(rho>1.){ gl_FragColor=vec4(0.); return; }
+  bool far=g.y>0.; if((layer>.5)==far){ gl_FragColor=vec4(0.); return; }
+  col=vec3(.80,.76,.95)*(.7+.3*rho); a=.6;
+  if(stepN>=2.){
+   vec2 sw=rot(rho*5.-tt*1.6)*g;
+   vec3 p=vec3(sw*4.,tt*.25)+jit;
+   vec3 w=vec3(fbm(p),fbm(p+4.7),0.);
+   float m=fbm(p+2.2*w);
+   float v=clamp(.5+.5*sin(m*10.+rho*6.)*(.4+.6*rho)+ (1.-rho)*.25,0.,1.);
+   col=vec3(v); a=1.;
+   if(stepN>=3.){ float k=floor(clamp(v,0.,.999)*5.); col=pal(2.,k); bright=step(2.5,k); }
+   if(stepN>=4.){
+    vec3 vo=vor(vec3(ang*2.4+tt*.6,rho*5.,0.)+jit);
+    float e=smoothstep(.07,.0,vo.y);
+    if(stepN<5.) col=mix(col,vec3(.05,.02,.1),e*.8);
+    else {
+     col=mix(col,vec3(.55,.95,1.),e*.7); bright=max(bright,e*.7);
+     float thr=openP*.78+(vo.z-.5)*.10*openP;
+     float d=rho-thr;
+     if(d<0.){ // the other side: deep void + stars
+      float s=step(.985,h31(floor(vec3(g*90.,floor(tt*3.)))));
+      col=vec3(.03,.0,.08)+s*vec3(.8,.9,1.); a=.96; bright=s;
+     } else if(d<.04){col=vec3(1.,.95,1.);bright=1.;} else if(d<.09){col=vec3(.4,.9,1.);bright=1.;} else if(d<.15){col=vec3(.7,.3,1.);bright=.6;}
+    }
+   }
+   float edge=smoothstep(.0,.07,1.-rho); a*=edge;
+  }
+  if(far) col*=.75;
+ }
+ a*=1.-burst;
+ if(glow>.5){ if(stepN<7.){gl_FragColor=vec4(0.);return;} gl_FragColor=vec4(col*bright*a,bright*a); return; }
+ gl_FragColor=vec4(col*a,a);
+}`;
+const vs=`attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}`;
+
+const view=document.getElementById('view'), ctx=view.getContext('2d');
+const W=view.width,H=view.height;
+const glc=document.createElement('canvas'); glc.width=W; glc.height=H;
+const gl=glc.getContext('webgl',{premultipliedAlpha:true,preserveDrawingBuffer:true});
+function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(s);return s;}
+const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);gl.useProgram(pr);
+const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const loc=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+const U={};['res','t','mode','layer','glow','openP','stepN','burst','boilOn'].forEach(n=>U[n]=gl.getUniformLocation(pr,n));
+gl.uniform2f(U.res,W,H);
+
+let mode=1, stepN=8, auto=true, manualOpen=1, boil=true;
+const glowCv=document.createElement('canvas');glowCv.width=W;glowCv.height=H;const gctx=glowCv.getContext('2d');
+
+function pass(layer,glow,o,burst,t){
+  gl.uniform1f(U.t,t);gl.uniform1f(U.mode,mode);gl.uniform1f(U.layer,layer);gl.uniform1f(U.glow,glow);
+  gl.uniform1f(U.openP,o);gl.uniform1f(U.stepN,stepN);gl.uniform1f(U.burst,burst);gl.uniform1f(U.boilOn,boil?1:0);
+  gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+}
+function drawGl(){ctx.drawImage(glc,0,0);}
+function drawGlow(){
+  gctx.clearRect(0,0,W,H);gctx.drawImage(glc,0,0);
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  ctx.filter='blur(6px)';ctx.drawImage(glowCv,0,0);
+  ctx.filter='blur(22px)';ctx.globalAlpha=.9;ctx.drawImage(glowCv,0,0);
+  ctx.restore();
+}
+function bg(){
+  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#141a2c');g.addColorStop(.6,'#1a2a2a');g.addColorStop(1,'#203626');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(W/2,H*0.80,150,30,0,0,7);ctx.fill();
+}
+function character(tm){ // simple chibi stand-in
+  const x=W/2, y=H*0.79, bob=Math.sin(tm*3)*2;
+  ctx.save();ctx.translate(x,y);
+  ctx.fillStyle='rgba(0,0,0,.35)';ctx.beginPath();ctx.ellipse(0,0,34,8,0,0,7);ctx.fill();
+  ctx.lineWidth=3;ctx.strokeStyle='#1b1830';
+  const part=(f,fill)=>{ctx.fillStyle=fill;ctx.beginPath();f();ctx.fill();ctx.stroke();};
+  part(()=>ctx.roundRect(-16,-34,12,32,5),'#3b3550');part(()=>ctx.roundRect(4,-34,12,32,5),'#4a4466');
+  part(()=>ctx.roundRect(-22,-78+bob,44,48,10),'#d9c7a3');
+  ctx.fillStyle='#3f7fa0';ctx.fillRect(-22,-78+bob,44,9);
+  part(()=>ctx.arc(0,-108+bob,32,0,7),'#f3d2b5');
+  part(()=>{ctx.moveTo(-34,-110+bob);ctx.quadraticCurveTo(-30,-150+bob,0,-144+bob);ctx.quadraticCurveTo(34,-150+bob,34,-110+bob);ctx.quadraticCurveTo(10,-124+bob,-34,-110+bob);},'#2b2f5a');
+  ctx.fillStyle='#1b1830';ctx.fillRect(-12,-108+bob,6,10);ctx.fillRect(8,-108+bob,6,10);
+  ctx.restore();
+}
+// born -> idle -> burst cycle (seconds)
+const CYC=[.7,2.6,.5,.6]; const CT=CYC.reduce((a,b)=>a+b);
+function cycle(tm){
+  let x=tm%CT;
+  const ease=s=>1-Math.pow(1-s,3); // "ระเบิด" ease-out
+  if(x<CYC[0]) return {o:ease(x/CYC[0]),b:0};
+  x-=CYC[0]; if(x<CYC[1]) return {o:1-.06*(.5+.5*Math.sin(x*5)),b:0};
+  x-=CYC[1]; if(x<CYC[2]) return {o:1,b:ease(x/CYC[2])};
+  return {o:0,b:1};
+}
+// meaning of "open" per mode: blood hole 0..1, ice integrity 0..1, portal radius 0..1
+function frame(ms){
+  const tm=ms/1000;
+  let o=manualOpen,bu=0;
+  if(auto&&stepN>=8){const c=cycle(tm);o=c.o;bu=c.b;document.getElementById('open').value=o;document.getElementById('pv').textContent=o.toFixed(2);}
+  const oShader = mode==0? o : mode==1? o*1.02 : o;
+  bg();
+  const behind = stepN<6; // before step 6 the effect is one sheet that hides the character
+  if(!behind) { pass(0,0,oShader,bu,tm); drawGl(); if(stepN>=7){pass(0,1,oShader,bu,tm);drawGlow();} }
+  character(tm);
+  if(behind){ pass(0,0,oShader,bu,tm); drawGl(); }
+  pass(1,0,oShader,bu,tm); drawGl();
+  if(stepN>=7){ pass(1,1,oShader,bu,tm); drawGlow(); }
+  requestAnimationFrame(frame);
+}
+function renderSteps(){
+  const ol=document.getElementById('steps');ol.innerHTML='';
+  STEPS[mode].forEach((s,i)=>{const li=document.createElement('li');li.innerHTML=s[0]+'<span class="tag">'+s[1]+'</span>';
+    li.className=(i+1==stepN?'cur':(i+1>stepN?'off':''));ol.appendChild(li);});
+  document.getElementById('plabel').textContent=PLABEL[mode];
+}
+document.querySelectorAll('#modes button').forEach(bt=>bt.onclick=()=>{
+  document.querySelectorAll('#modes button').forEach(x=>x.classList.remove('on'));bt.classList.add('on');mode=+bt.dataset.m;renderSteps();});
+document.getElementById('step').oninput=e=>{stepN=+e.target.value;document.getElementById('stepv').textContent=stepN;renderSteps();};
+document.getElementById('open').oninput=e=>{auto=false;document.getElementById('auto').classList.remove('on');manualOpen=+e.target.value;document.getElementById('pv').textContent=manualOpen.toFixed(2);};
+document.getElementById('auto').onclick=e=>{auto=!auto;e.target.classList.toggle('on',auto);};
+document.getElementById('boil').onchange=e=>boil=e.target.checked;
+renderSteps();requestAnimationFrame(frame);
+</script>
+</body>
+</html>

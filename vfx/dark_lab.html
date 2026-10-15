@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dark VFX Lab</title>
+<style>
+:root{--bg:#120f1c;--panel:#1d1a2c;--line:#2e2a45;--text:#ece8ff;--dim:#958fb8;--acc:#b45cff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Segoe UI",Tahoma,sans-serif}
+.wrap{display:flex;gap:16px;padding:16px;flex-wrap:wrap;justify-content:center}
+canvas#view{background:#0d0b14;border-radius:12px;max-width:100%;height:auto;border:1px solid var(--line)}
+.side{width:340px;max-width:100%;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+h1{font-size:18px;margin:0 0 4px}.sub{color:var(--dim);font-size:13px;line-height:1.5}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+button{background:#2a2640;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;font-size:13px}
+button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+label{font-size:13px;color:var(--dim);display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0}
+input[type=range]{width:150px}
+ol{margin:6px 0 0;padding-left:20px;font-size:13px;line-height:1.6}
+ol li.cur{color:#d9a6ff;font-weight:600} ol li.off{color:#5c5680}
+.tag{display:inline-block;font-size:11px;border:1px solid #5b5390;color:#b9b0ff;border-radius:99px;padding:0 6px;margin-left:4px}
+.cat{font-size:11px;color:#1a1200;background:#ffb347;border-radius:99px;padding:1px 7px;margin-left:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <canvas id="view" width="760" height="520"></canvas>
+  <div class="side">
+    <div class="card"><h1>Dark VFX Lab</h1>
+      <div class="sub">แกะจากคลิปอ้างอิง (Hunter Raid) · หลักของ VFX สีดำ: <b>แกนดำ (วาดทับแบบปกติ) + ขอบสว่าง (บวกแสง)</b> — ดำอย่างเดียวจะจมหายในฉากมืด</div></div>
+    <div class="card"><div class="row" id="modes">
+      <button data-m="0" class="on">หนามทมิฬปะทุ<span class="cat">พื้น</span></button>
+      <button data-m="1">ระเบิดความว่าง<span class="cat">โดน</span></button>
+      <button data-m="2">พายุหมุนเงา<span class="cat">สกิล</span></button>
+      <button data-m="3">อสูรเงาพุ่ง<span class="cat">สกิล</span></button>
+      <button data-m="4">สแลช X ม่วง<span class="cat">อาวุธ</span></button>
+      <button data-m="5">ฝูงอสูรเงา<span class="cat">Sprite+Code</span></button>
+    </div></div>
+    <div class="card">
+      <label>แสดงถึงขั้นที่ <b id="stepv">7</b></label>
+      <input id="step" type="range" min="1" max="7" value="7" style="width:100%">
+      <ol id="steps"></ol>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:6px"><button id="play" class="on">▶ เล่นวน</button><button id="fire">⚡ ยิงครั้งเดียว</button></div>
+      <label><span>ความคืบหน้า (เกิด → ปะทุ → สลาย)</span><b id="pv">0</b></label>
+      <input id="prog" type="range" min="0" max="1" step="0.005" value="0" style="width:100%">
+      <label><span>สีขอบ</span><select id="tint"><option value="purple">ม่วง (แบบคลิป)</option><option value="red">แดงเลือด</option><option value="cyan">ฟ้าวิญญาณ</option><option value="gold">ทองต้องสาป</option></select></label>
+      <label><span>วิธีสร้าง</span><select id="render" style="width:170px">
+        <option value="seqfx" selected>Sprite + โค้ดเก็บงาน</option><option value="seq">Sprite ล้วน (เล่นเฟรม)</option>
+        <option value="pieces">ภาพเดี่ยว + โค้ด</option><option value="code">โค้ดล้วน</option></select></label>
+      <label><span>เทียบเฟรม (onion)</span><input type="checkbox" id="onion"></label>
+      <label><span>โชว์ตัวละคร</span><input type="checkbox" id="char" checked></label>
+      <label><span>จอสั่นตอนปะทุ</span><input type="checkbox" id="shake" checked></label>
+    </div>
+  </div>
+</div>
+<script>
+const STEPS={
+ 0:[['รูปทรง: แตกพื้น + หนามพุ่ง','voronoi · triangle'],['ขอบขาดวิ่น','fbm noise'],['แกนดำ 3 โทน','posterize'],['ขอบม่วงสว่าง','rim'],['แสงฟุ้ง','bloom additive'],['เศษหินกระเด็น','particles'],['จังหวะ + boil 15fps','timing']],
+ 1:[['รูปทรง: ก้อนกลมขยาย','circle · ease-out'],['ขอบควันขาดวิ่น','domain warp'],['แกนดำ 3 โทน','posterize'],['ขอบม่วง + แฟลชกลาง','rim · core flash'],['แสงฟุ้ง','bloom additive'],['เศษดำกระจาย + รูทะลุ','particles · dissolve'],['จังหวะ + boil 15fps','timing']],
+ 2:[['รูปทรง: กรวยพายุ','funnel'],['แถบลมบิดเกลียว','polar · fbm'],['สีเทา-ขาว 3 โทน','posterize'],['ฐานม่วง + ขอบ','rim'],['แสงฟุ้ง','bloom additive'],['เศษหินดำโคจร','particles (depth)'],['จังหวะ + boil 15fps','timing']],
+ 5:[['ง้าง: วงเวท + เล็งเป้า','anticipation'],['อสูร 3 ตัวก่อตัว (ท่าบินวนลูป)','sprite clip · loop'],['บินโค้งคนละทาง หันหัวตามทาง','bezier path · rotate'],['งับทีละตัว + ระเบิดเล็ก','hitstop · sprite instance'],['ตัวใหญ่ปิด: ระเบิดใหญ่ + หนามเป็นแนว','emitter · flip · scale'],['ตัวเลข → TOTAL','damage UI'],['ฝุ่นประกาย + ขอบจอ','particles · vignette']],
+ 4:[['ภาพสแลช 2 เส้น','sprite'],['ไขว้เป็น X + มุม','transform'],['กวาดออกทีละเส้น','scale wipe'],['แกนขาว-ขอบม่วง','rim'],['แสงฟุ้ง','bloom additive'],['ประกายแตก','particles'],['จังหวะ + จอสั่น','timing']],
+ 3:[['ง้าง: วงเวท + พลังดูดเข้า + จอมืด','anticipation'],['อสูรก่อตัวจากควัน','sprite 0-1'],['พุ่ง: เงาซ้อน + เส้นความเร็ว','sprite 2 · stretch'],['โดน: หยุดภาพ + แฟลช + จอสั่น','hitstop'],['วงแหวนกระแทก 3 วง + ระเบิด','rings · burst'],['ตัวเลขรัว → TOTAL','damage UI'],['ค้าง: ควัน ประกาย แอ่งเงา','linger']],
+ 9:[['รูปทรง: เขี้ยวเงาพุ่ง','wedge · claw'],['ควันลากหาง','fbm trail'],['แกนดำ 3 โทน','posterize'],['ขอบม่วง + หัวร้อนขาว','rim · leading edge'],['แสงฟุ้ง','bloom additive'],['เศษควันหลุด','particles'],['จังหวะ + boil 15fps','timing']]
+};
+const TINT={purple:[.70,.32,1.0],red:[1.0,.18,.25],cyan:[.25,.85,1.0],gold:[1.0,.75,.25]};
+const fs=`
+precision highp float;
+uniform vec2 res; uniform float t; uniform float p; uniform float mode; uniform float stepN; uniform float glow; uniform vec3 tint; uniform vec2 ofs; uniform float spr;
+float h31(vec3 q){q=fract(q*.1031);q+=dot(q,q.zyx+31.32);return fract((q.x+q.y)*q.z);}
+vec3 h33(vec3 q){q=vec3(dot(q,vec3(127.1,311.7,74.7)),dot(q,vec3(269.5,183.3,246.1)),dot(q,vec3(113.5,271.9,124.6)));return fract(sin(q)*43758.5453);}
+float vn(vec3 q){vec3 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);
+ return mix(mix(mix(h31(i),h31(i+vec3(1,0,0)),f.x),mix(h31(i+vec3(0,1,0)),h31(i+vec3(1,1,0)),f.x),f.y),
+            mix(mix(h31(i+vec3(0,0,1)),h31(i+vec3(1,0,1)),f.x),mix(h31(i+vec3(0,1,1)),h31(i+vec3(1,1,1)),f.x),f.y),f.z);}
+float fbm(vec3 q){float a=.5,s=0.;for(int i=0;i<5;i++){s+=a*vn(q);q*=2.03;a*=.5;}return s;}
+vec2 vor(vec2 q){vec2 i=floor(q),f=fract(q);float d1=9.,d2=9.;
+ for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++){vec2 g=vec2(float(x),float(y));vec2 r=g+h33(vec3(i+g,1.)).xy-f;float d=dot(r,r);
+  if(d<d1){d2=d1;d1=d;}else if(d<d2)d2=d;}return vec2(sqrt(d1),sqrt(d2)-sqrt(d1));}
+float eo(float x){x=clamp(x,0.,1.);return 1.-pow(1.-x,3.);}
+// dark 3-tone fill: near-black -> deep tint -> mid tint (หลัก posterize)
+vec3 darkTone(float v){ if(v<.45) return vec3(.02,.01,.04); if(v<.75) return tint*.16+vec3(.02); return tint*.34+vec3(.03); }
+vec4 outc; float bright;
+void put(float a, vec3 col, float br){ // composite over (normal blend inside shader)
+ a=clamp(a,0.,1.); outc.rgb=mix(outc.rgb,col,a); outc.a=a+outc.a*(1.-a); bright=max(bright*(1.-a),br*a);}
+void main(){
+ vec2 uv=(gl_FragCoord.xy-.5*res)/res.y-ofs;
+ if(spr>.5&&mode>2.5){gl_FragColor=vec4(0.);return;} // ใช้ภาพที่เจนแทน
+ float tt=stepN>=7.?floor(t*15.)/15.:t;            // boil: 15fps
+ float jit=stepN>=7.?h31(vec3(floor(t*15.),3.,7.))*.35:0.;
+ outc=vec4(0.); bright=0.;
+ float gy=-.27;                                      // ground line
+ bool rough=stepN>=2., tones=stepN>=3., rim=stepN>=4., parts=stepN>=6.;
+ vec3 base=vec3(.55,.52,.62);
+ if(mode<.5){
+  // ===== A: หนามทมิฬปะทุ (ground) =====
+  float grow=eo(p/.35), fade=1.-smoothstep(.72,1.,p);
+  // cracks on ground (perspective ellipse)
+  vec2 g=vec2(uv.x,(uv.y-gy)/.32); float r=length(g);
+  float R=.62*grow;
+  vec2 vo=vor(g*7.+jit); float e=smoothstep(.07,.0,vo.y);
+  float rr=r+(rough?(fbm(vec3(g*6.,1.))-.5)*.18:0.);
+  float inR=1.-smoothstep(R-.06,R,rr);
+  float crack=e*inR*fade*step(abs(uv.y-gy),.2);
+  if(crack>.01) put(crack*.95, tones?vec3(.015,.0,.03):base*.4, 0.);
+  if(rim&&crack>.01){ float edgeRing=smoothstep(.12,.0,abs(rr-R+.03))*e; put(edgeRing*.8,tint*1.2,edgeRing); }
+  // spikes rising behind
+  float y=uv.y-gy;
+  if(y>-.02&&spr<.5){
+   float x=uv.x*13.; float cell=floor(x); float u=fract(x)-.5;
+   float d=abs(cell/13.);
+   float rise=eo((p-.08-d*.35)/.25)*fade;
+   float hgt=(.18+.42*h31(vec3(cell,5.,1.)))*rise*(1.-smoothstep(.25,.55,d));
+   u+= (h31(vec3(cell,2.,9.))-.5)*.5*y;            // lean
+   float w=(1.-y/max(hgt,1e-3));
+   float edge=w*.5-abs(u);
+   if(rough) edge+= (fbm(vec3(uv*14.,tt*.6))-.5)*.10;
+   float inS=step(0.,edge)*step(y,hgt);
+   if(stepN>=6.) inS*=step(fbm(vec3(uv*9.,2.)),1.15-(p-.6)*2.4); // dissolve from top
+   if(inS>0.){
+    float v=tones?fbm(vec3(uv*8.,tt*.4))+.25*w:0.5;
+    put(1.,tones?darkTone(v):base,0.);
+    if(rim){ float rm=smoothstep(.05,.0,edge); put(rm,mix(tint,vec3(1.),.35),rm*1.2); }
+   }
+  }
+  if(parts&&spr<.5){ for(int i=0;i<16;i++){float fi=float(i); vec3 hh=h33(vec3(fi,4.,4.));
+    float lt=(p-.1-hh.z*.15)/.6; if(lt<0.||lt>1.)continue;
+    vec2 ps=vec2((hh.x-.5)*.9, gy+ (hh.y*.8+.3)*lt-.9*lt*lt);
+    float rad=.006+.01*hh.z; float dd=length(uv-ps);
+    if(dd<rad) put(1.,vec3(.03,.02,.05),0.); else if(rim&&dd<rad+.004) put(.7,tint,.6);}}
+ } else if(mode<1.5){
+  // ===== B: ระเบิดความว่าง (hit burst) =====
+  vec2 c=vec2(.08,.0); vec2 q=uv-c; float r=length(q);
+  float grow=eo(p/.3), fade=1.-smoothstep(.55,1.,p);
+  float R=.40*grow;
+  float n=rough?fbm(vec3(q*4.+vec2(0.,-tt*.4),tt*.5)+jit):.5;
+  vec2 w=rough?vec2(fbm(vec3(q*3.,tt)),fbm(vec3(q*3.+7.,tt)))-.5:vec2(0.);
+  float edge=R*(.72+.55*n)-length(q+w*.18);
+  float holes=parts?fbm(vec3(q*7.,9.)):0.;
+  float alive=step(holes,1.25-p*1.5);
+  if(edge>0.&&alive>0.){
+   float v=tones?n+.35*(1.-r/max(R,1e-3)):.5;
+   put(fade*1., tones?darkTone(v):base,0.);
+   if(rim){ float rm=smoothstep(.035,.0,edge); put(rm*fade,mix(tint,vec3(1.),.25),rm*1.1*fade); }
+  }
+  if(rim){ // white-hot core flash (หลักที่ 5: เฟรมโดน = สว่างสุด)
+   float fl=exp(-r*r/(.004+.03*p))*(1.-smoothstep(.0,.45,p));
+   put(fl, mix(vec3(1.),tint,.3), fl*1.6);
+   float ring=smoothstep(.02,.0,abs(r-.55*eo(p/.25)))*(1.-smoothstep(.1,.35,p)); put(ring*.8,mix(tint,vec3(1.),.5),ring);
+  }
+  if(parts&&spr<.5){ for(int i=0;i<22;i++){float fi=float(i); vec3 hh=h33(vec3(fi,8.,1.));
+    float an=hh.x*6.2832, sp=.25+.55*hh.y; float lt=p*1.3-hh.z*.1; if(lt<0.)continue;
+    vec2 ps=c+vec2(cos(an),sin(an)*.8)*sp*eo(lt) + vec2(0.,-.25*lt*lt);
+    float rad=(.008+.016*hh.z)*(1.-smoothstep(.6,1.,lt)); if(length(uv-ps)<rad) put(1.,vec3(.03,.02,.04),0.);}}
+ } else if(mode<2.5){
+  // ===== C: พายุหมุนเงา (skill) =====
+  float grow=eo(p/.25), fade=1.-smoothstep(.8,1.,p);
+  float y=uv.y-gy; float H=.78*grow;
+  if(y>-.03&&y<H){
+   float wdt=(.10+.32*(y/.78))*(.85+.15*sin(tt*3.+y*8.));
+   float sx=(uv.x-.05*sin(y*6.+tt*2.))/wdt;
+   if(abs(sx)<1.){
+    float th=asin(clamp(sx,-1.,1.));
+    float n=rough?fbm(vec3(th*1.5-tt*3.,y*5.,tt*.3)+jit):.5;
+    float band=.5+.5*sin(y*34.+th*2.5-tt*14.+n*5.);
+    float v=band*(.45+.55*n)+.15;
+    float a=(1.-pow(abs(sx),6.))*fade*smoothstep(H,H-.12,y);
+    if(rough) a*=smoothstep(.08,.3,v);
+    vec3 col=tones?(v<.4?vec3(.42,.42,.52):v<.72?vec3(.70,.72,.82):vec3(.95,.97,1.)):vec3(.7);
+    if(rim){ float bot=1.-smoothstep(.0,.22,y); col=mix(col,tint*.9,bot*.7); }
+    put(a*.92,col,(tones&&v>=.8)?.55:0.);
+   }
+  }
+  if(rim){ vec2 g=vec2(uv.x,(uv.y-gy)/.3); float rr=length(g); float ring=smoothstep(.03,.0,abs(rr-.45*grow))*fade; put(ring,tint,ring); }
+  if(parts&&spr<.5){ for(int i=0;i<18;i++){float fi=float(i); vec3 hh=h33(vec3(fi,2.,6.));
+    float yy=fract(hh.y+tt*.12)*H; float wdt=.10+.32*(yy/.78)+.05;
+    float an=tt*(3.+hh.x*2.)+hh.z*6.28; float z=sin(an);
+    vec2 ps=vec2(cos(an)*wdt,gy+yy); float rad=(.010+.012*hh.x)*(1.+.35*z);
+    if(length(uv-ps)<rad) put(z>0.?1.:.6,vec3(.04,.03,.05)*(z>0.?1.:2.),0.);}}
+ } else {
+  // ===== D: คลื่นเงาพุ่ง (skill) =====
+  float head=-.75+1.55*smoothstep(.05,.55,p); float fade=1.-smoothstep(.75,1.,p);
+  vec2 q=uv-vec2(head,.0);
+  float len=.55;
+  float along=-q.x/len;                            // 0 at head, 1 at tail
+  float th=.13*(1.-pow(clamp(along,0.,1.),.7))+.02;
+  if(rough) th*=.75+.6*fbm(vec3(uv.x*6.-tt*4.,uv.y*6.,tt));
+  float body=th-abs(q.y+.05*sin(uv.x*9.-tt*10.)*along);
+  float inB=step(0.,body)*step(along,1.)*step(-.02,along);
+  // claw tips at the head
+  for(int k=0;k<3;k++){float fk=float(k)-1.; vec2 cp=q-vec2(.02,fk*.075); float ct=.045*(1.-clamp(cp.x/.12,0.,1.)); if(cp.x>0.&&cp.x<.12&&abs(cp.y+cp.x*fk*.4)<ct) inB=1.;}
+  if(inB>0.){
+   float v=tones?fbm(vec3(uv*7.-vec2(tt*3.,0.),tt))+.3*(1.-along):.5;
+   put(fade, tones?darkTone(v):base,0.);
+   if(rim){ float rm=smoothstep(.03,.0,body)*step(.0,along); put(rm*fade,mix(tint,vec3(1.),.3),rm*fade*1.2);
+     float hot=exp(-dot(q-vec2(.05,0.),q-vec2(.05,0.))/.006)*fade; put(hot,vec3(1.),hot*1.5); }
+  }
+  // trailing smoke
+  if(rough&&along>.6&&along<2.2){ float s=fbm(vec3(uv*5.+vec2(tt*1.5,0.),tt*.5)); float a=smoothstep(.55,.7,s)*(1.-smoothstep(.6,2.2,along))*fade*step(abs(q.y),.22);
+    put(a*.85, tones?darkTone(s-.2):base*.6,0.); }
+  if(parts){ for(int i=0;i<16;i++){float fi=float(i); vec3 hh=h33(vec3(fi,6.,3.)); float lt=fract(hh.x+tt*1.4);
+    vec2 ps=vec2(head-.1-lt*.7,(hh.y-.5)*.25+lt*(hh.z-.5)*.3); float rad=.012*(1.-lt);
+    if(length(uv-ps)<rad) put(fade,vec3(.03,.02,.05),0.);}}
+ }
+ if(glow>.5){ if(stepN<5.){gl_FragColor=vec4(0.);return;} gl_FragColor=vec4(outc.rgb*bright*outc.a,bright*outc.a); return; }
+ gl_FragColor=vec4(outc.rgb*outc.a,outc.a);
+}`;
+const vs=`attribute vec2 a;void main(){gl_Position=vec4(a,0,1);}`;
+const view=document.getElementById('view'),ctx=view.getContext('2d'),W=view.width,H=view.height;
+const glc=document.createElement('canvas');glc.width=W;glc.height=H;
+const gl=glc.getContext('webgl',{premultipliedAlpha:true,preserveDrawingBuffer:true});
+let pr=null,U={};
+if(gl){
+function sh(ty,src){const s=gl.createShader(ty);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(s);return s;}
+pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);gl.useProgram(pr);
+gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const al=gl.getAttribLocation(pr,'a');gl.enableVertexAttribArray(al);gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+['res','t','p','mode','stepN','glow','tint','ofs','spr'].forEach(n=>U[n]=gl.getUniformLocation(pr,n));gl.uniform2f(U.res,W,H);
+} else console.warn('WebGL ไม่พร้อม: ใช้ได้เฉพาะโหมด Sprite');
+const gcv=document.createElement('canvas');gcv.width=W;gcv.height=H;const gx=gcv.getContext('2d');
+// ---------- ภาพที่เจน (หลักที่ 7: AI ทำรูปทรงสิ่งมีชีวิต/หนาม · โค้ดทำส่วนที่ต้องขยับ) ----------
+const SP={};const SPN=[...[0,1,2,3,4,5].map(i=>'thorn_'+i),'beast',...[0,1,2,3].map(i=>'slash_'+i),...[0,1,2,3,4,5,6,7].map(i=>'rock_'+i),...[0,1,2,3,4,5].map(i=>'smoke_'+i),...[0,1,2,3,4,5].map(i=>'spark_'+i)];
+for(const n of SPN)for(const g of ['','_glow']){const im=new Image();im.src='../assets/vfx/dark/sprites/'+n+g+'.png';SP[n+g]=im;}
+const RM=()=>document.getElementById('render').value;
+const useSpr=()=>RM()==='pieces';
+// ---------- SPRITE SEQUENCE (เฟรมที่ AI เจน) ----------
+// w: น้ำหนักเวลาต่อเฟรมในโหมดเก็บงาน (ง้างนาน/ค้างเฟรมแรงสุด = หลักที่ 5) · key: เฟรมที่จอสั่น
+const SEQ={0:{n:'thorns',h:360,ax:.5,ay:.92,y:'ground',w:[1,1.2,.6,.5,1.8,1.2,1,1],key:4},
+           1:{n:'burst',h:520,ax:.5,ay:.5,y:.5,w:[.6,1.6,.7,1,1,1,1,1],key:1},
+           2:{n:'tornado',h:620,ax:.5,ay:.775,y:'ground',loop:true,fps:12},
+           3:{n:'beast',h:270,ax:.8,ay:.5,y:.47,w:[1.4,1.4,.7,1.8,1,1],key:3,travel:true},
+           4:{n:'slash',h:420,ax:.5,ay:.5,y:.5,w:[.5,.6,.6,1.8,1,1],key:3}};
+for(const k in SEQ){const q=SEQ[k];q.img=new Image();q.img.src='../assets/vfx/dark/seq/'+q.n+'.png';q.glow=new Image();q.glow.src='../assets/vfx/dark/seq/'+q.n+'_glow.png';
+  fetch('../assets/vfx/dark/seq/'+q.n+'.json').then(r=>r.json()).then(j=>Object.assign(q,{F:j.frames,fw:j.w,fh:j.h}));}
+const HUE={purple:0,red:80,cyan:-85,gold:135};
+function seqFrame(q,P,t,polish){ if(q.loop)return Math.floor(t*(q.fps||12))%q.F;
+  const w=polish&&q.w?q.w:Array(q.F).fill(1);const tot=w.reduce((a,b)=>a+b);let x=P*tot;for(let i=0;i<q.F;i++){if(x<w[i])return i;x-=w[i];}return q.F-1;}
+function drawSeq(t,layer){ const q=SEQ[mode===5?3:mode];if(!q||!q.F||!q.img.width)return null; const polish=RM()==='seqfx';
+  if(mode===3&&polish){beastSkill(t,layer===0?0:1);return null;}
+  if(mode===5){swarmSkill(t,layer===0?0:1);return null;} // สกิลเต็มรูปแบบ (คุณภาพเกม)
+  const behind=mode===0||mode===2; if((layer===0)!==behind)return null;
+  const f=seqFrame(q,prog,t,polish), h=q.h, w=q.fw*h/q.fh, gy=H*.77;
+  let x=W*TX, y=q.y==='ground'?gy:H*q.y, sx=1;
+  if(q.travel){const go=eo(prog/.5);x=W*.2+(W*TX-W*.2+30)*go; if(polish){sx=1+.25*Math.max(0,1-Math.abs(prog-.32)/.15);} } // พุ่งจากผู้เล่นไปหาเป้า + ยืดตอนเร็วสุด
+  const hue=HUE[document.getElementById('tint').value]||0, dx=-q.ax*w*sx, dy=-q.ay*h;
+  const blit=(img,a,extra)=>{ctx.save();ctx.translate(x,y);ctx.scale(sx,1/Math.sqrt(sx));ctx.globalAlpha=a;ctx.filter=(hue?`hue-rotate(${hue}deg) `:'')+(extra||'');
+    ctx.drawImage(img,f*q.fw,0,q.fw,q.fh,dx/sx,dy,w,h);ctx.restore();};
+  if(document.getElementById('onion').checked){ for(let i=0;i<q.F;i++){ctx.save();ctx.translate(x,y);ctx.globalAlpha=.18;ctx.drawImage(q.img,i*q.fw,0,q.fw,q.fh,dx,dy,w,h);ctx.restore();} }
+  blit(q.img,1);
+  if(polish){ // เก็บงาน: แสงฟุ้งจากชั้น glow + เต้นตามจังหวะ
+    ctx.save();ctx.globalCompositeOperation='lighter';const pk=q.key!==undefined&&f===q.key?1.6:1;
+    ctx.translate(x,y);ctx.scale(sx,1/Math.sqrt(sx));ctx.filter=(hue?`hue-rotate(${hue}deg) `:'')+'blur(6px)';ctx.globalAlpha=.75*pk;ctx.drawImage(q.glow,f*q.fw,0,q.fw,q.fh,dx/sx,dy,w,h);
+    ctx.filter=(hue?`hue-rotate(${hue}deg) `:'')+'blur(20px)';ctx.globalAlpha=.6*pk;ctx.drawImage(q.glow,f*q.fw,0,q.fw,q.fh,dx/sx,dy,w,h);ctx.restore();}
+  return {f,key:q.key};
+}
+let lastSeqF=-1;
+const hsh=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x);};
+const eo=x=>{x=Math.min(1,Math.max(0,x));return 1-Math.pow(1-x,3);};
+// วาดภาพ: x,y = จุดยึด (ax,ay สัดส่วนในภาพ), h = สูงเป็นพิกเซล
+function spr(n,x,y,h,{rot=0,a=1,sx=1,ax=.5,ay=.5,clipY=null,glow=1}={}){const im=SP[n];if(!im||!im.width||a<=0||h<=0)return;const w=im.width*h/im.height;
+  ctx.save();if(clipY!==null){ctx.beginPath();ctx.rect(-1e4,-1e4,2e4,clipY+1e4);ctx.clip();}
+  ctx.translate(x,y);ctx.rotate(rot);ctx.scale(sx,1);ctx.globalAlpha=a;ctx.drawImage(im,-ax*w,-ay*h,w,h);
+  const g=SP[n+'_glow'];if(stepN>=5&&glow>0&&g&&g.width){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=a*glow*.8;ctx.filter='blur(4px)';ctx.drawImage(g,-ax*w,-ay*h,w,h);ctx.filter='blur(12px)';ctx.drawImage(g,-ax*w,-ay*h,w,h);}
+  ctx.restore();}
+function sprites(layer,t){ // layer 0 = หลังตัวละคร/เป้า, 1 = หน้า
+  if(!useSpr())return; const P=prog, tx=W*TX, gy=H*.77, fade=1-Math.max(0,(P-.75)/.25);
+  if(mode===0&&layer===0){ // หนามโผล่จากพื้น (ตัดส่วนใต้พื้นทิ้ง)
+    const xs=[-150,-95,-40,25,85,145];
+    xs.forEach((dx,i)=>{const d=.05*Math.abs(i-2.5);const rise=eo((P-.08-d)/.16)*(1-Math.max(0,(P-.7)/.3));
+      const h=(150+110*hsh(i))*(.9+.1*Math.sin(t*20+i)*(P<.3?1:0));
+      spr('thorn_'+i,tx+dx,gy+ (1-rise)*h+4,h,{ax:.5,ay:1,clipY:gy+8,a:fade>0?1:0,glow:1+(P<.25?1:0)});});}
+  if(mode===0&&layer===1&&stepN>=6){ for(let i=0;i<8;i++){const lt=(P-.1-hsh(i+9)*.12)/.6;if(lt<0||lt>1)continue;
+      const vx=(hsh(i)-.5)*420, vy=-(260+260*hsh(i+3));spr('rock_'+i,tx+vx*lt,gy-20+vy*lt+520*lt*lt,18+18*hsh(i+5),{rot:lt*6*(hsh(i)-.5)*4,a:1-Math.max(0,(lt-.8)/.2)});}}
+  if(mode===1&&layer===1&&stepN>=6){ const cy=H*.5;
+    for(let i=0;i<6;i++){const an=i/6*Math.PI*2+hsh(i)*.6, lt=eo(P/.7);spr('smoke_'+i,tx+Math.cos(an)*170*lt,cy+Math.sin(an)*110*lt,50+60*lt,{a:(1-P)*1.1,rot:an*.3,glow:.6});}
+    for(let i=0;i<6;i++){const an=i/6*Math.PI*2+.4, lt=eo(P/.35);spr('spark_'+i,tx+Math.cos(an)*230*lt,cy+Math.sin(an)*170*lt,46*(1-P*.6),{a:1-Math.min(1,P/.5),rot:an+Math.PI/2,glow:1.4});}}
+  if(mode===2&&stepN>=6){ const H2=330*eo(P/.25);for(let i=0;i<8;i++){const yy=((hsh(i)+t*.12)%1)*H2, an=t*(3+hsh(i+2)*2)+i, z=Math.sin(an);
+      if((z>0)!==(layer===1))continue; const wd=40+120*(yy/330)+20;
+      spr('rock_'+i,tx+Math.cos(an)*wd,gy-yy,(14+12*hsh(i))*(1+.3*z),{a:fade*(z>0?1:.55),rot:t*3+i,glow:.5});}}
+  if(mode===3&&layer===1){ // อสูรเงาพุ่งจากตัวผู้เล่นไปหาเป้า
+    const go=eo(P/.42), x=W*.18+(tx-W*.18+40)*go, y=H*.47+Math.sin(P*20)*4*(1-go), h=230*(.75+.35*go);
+    for(let i=0;i<5;i++){const lag=(i+1)*.05, gx=W*.18+(tx-W*.18+40)*eo((P-lag)/.42);if(P<lag)continue;
+      spr('smoke_'+i,gx-60-i*25,y+(hsh(i)-.5)*60,60+i*12,{a:fade*.75*(1-i/6),glow:.4});}
+    spr('beast',x,y,h,{ax:.85,ay:.55,a:fade,glow:1+(P>.42&&P<.55?1.5:0)});
+    if(P>.42&&stepN>=6){const k=(P-.42)/.25; spr('slash_3',tx+10,H*.5,260,{a:Math.max(0,1-k),sx:.5+eo(k*3)*.6,rot:-.3,glow:1.5});}}
+  if(mode===4&&layer===1){ // สแลช X: เส้นแรก แล้วเส้นที่สองไขว้
+    [[0,-.55,'slash_0'],[.12,.55,'slash_1']].forEach(([d,rot,n])=>{const k=(P-d)/.5;if(k<0)return;const wipe=stepN>=3?eo(k*4):1;
+      spr(n,tx,H*.5,stepN>=2?300:240,{rot:stepN>=2?rot:0,sx:.25+.75*wipe,a:k<.4?1:Math.max(0,1-(k-.4)/.6),glow:stepN>=4?1.6:0});});
+    if(stepN>=6)for(let i=0;i<6;i++){const an=i/6*Math.PI*2, lt=eo((P-.12)/.3);if(P<.12)continue;spr('spark_'+i,tx+Math.cos(an)*160*lt,H*.5+Math.sin(an)*120*lt,40,{a:1-Math.min(1,(P-.12)/.4),rot:an+1.57,glow:1.4});}}
+}
+const hero=new Image();hero.src='../assets/characters/knight/master_cut.png';
+
+let mode=0,stepN=7,playing=true,prog=0,once=false,T0=performance.now(),last=performance.now(),shake=0,prevP=0;
+const LIFE=[1.6,1.1,2.4,1.4,.8,3.4];
+const TX=.62; // จุดเป้าหมาย (สัดส่วนความกว้างจอ)
+function pass(glow,t){if(!gl)return;gl.uniform2f(U.ofs,(TX-.5)*W/H,0.);gl.uniform1f(U.spr,useSpr()?1:0);gl.uniform1f(U.t,t);gl.uniform1f(U.p,prog);gl.uniform1f(U.mode,mode);gl.uniform1f(U.stepN,stepN);gl.uniform1f(U.glow,glow);
+  gl.uniform3fv(U.tint,TINT[document.getElementById('tint').value]);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}
+function bg(){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#1b1430');g.addColorStop(.55,'#2a1f45');g.addColorStop(1,'#1c1630');ctx.fillStyle=g;ctx.fillRect(-20,-20,W+40,H+40);
+  ctx.fillStyle='#231b3a';for(let i=0;i<9;i++){ctx.fillRect(40+i*82,60,52,120);} // windows
+  ctx.fillStyle='rgba(120,90,200,.12)';for(let i=0;i<9;i++)ctx.fillRect(46+i*82,66,40,50);
+  ctx.fillStyle='#1a1428';ctx.fillRect(-20,H*0.69,W+40,H);
+  ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=2;for(let i=0;i<14;i++){ctx.beginPath();ctx.moveTo(i*60-30,H*.69);ctx.lineTo(i*90-200,H);ctx.stroke();}}
+function drawDummy(t){ // ศัตรู (หุ่นเป้า) ที่ตำแหน่งเป้าหมาย
+  const x=W*TX,y=H*.77;ctx.save();ctx.translate(x,y);ctx.fillStyle='rgba(0,0,0,.4)';ctx.beginPath();ctx.ellipse(0,0,40,9,0,0,7);ctx.fill();
+  ctx.fillStyle='#3a2f55';ctx.strokeStyle='#120d1e';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(-30,-120,60,110,16);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#ff4d6d';ctx.beginPath();ctx.arc(-10,-90,5,0,7);ctx.arc(12,-90,5,0,7);ctx.fill();ctx.restore();}
+function seqKey(r){ // จอสั่นตรงเฟรมแรงสุด (เฉพาะโหมดเก็บงาน)
+  if(RM()==='seqfx'&&r.key!==undefined&&r.f===r.key&&lastSeqF!==r.f&&document.getElementById('shake').checked)shake=[10,14,6,12,8,0][mode];
+  lastSeqF=r.f;}
+function seqParticles(t){ // อนุภาคเสริมจากชิ้นเดี่ยว: เศษหิน/ประกาย กระเด็นหลังเฟรมแรงสุด
+  const P=prog, tx=W*TX, gy=H*.77, cy=mode===0||mode===2?gy-60:H*.5;
+  if(mode===2)return;
+  for(let i=0;i<6;i++){const lt=(P-.35-hsh(i+20)*.1)/.5;if(lt<0||lt>1)continue;
+    const an=-Math.PI/2+(hsh(i)-.5)*2.6, sp=200+160*hsh(i+7);
+    spr(i%2?'spark_'+i:'rock_'+i,tx+Math.cos(an)*sp*lt,cy+Math.sin(an)*sp*lt+300*lt*lt,i%2?30:18,{a:1-lt,rot:lt*8,glow:1.2});}}
+function frame(ms){
+  const dt=Math.min(.05,(ms-last)/1000);last=ms;const t=(ms-T0)/1000;
+  const life=(mode===3&&RM()==='seqfx')?SK.LIFE:mode===5?SW.LIFE:LIFE[mode];
+  if(playing||once){prog+=dt/life;if(prog>=1){if(once){once=false;prog=1;}else prog=0;}
+    document.getElementById('prog').value=prog;document.getElementById('pv').textContent=prog.toFixed(2);}
+  const burstAt=[.12,.02,.05,.42,.1,9][mode];
+  if(RM().startsWith('seq')===false&&prevP<burstAt&&prog>=burstAt&&document.getElementById('shake').checked)shake=[10,14,6,12,8][mode];prevP=prog;
+  ctx.save();if(shake>.3){ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);shake*=.85;}
+  bg();
+  const showChar=document.getElementById('char').checked&&hero.complete&&hero.width;
+  const cx=W*.25;
+  // พื้น/หลัง: วาด VFX ก่อนตัวละคร สำหรับแบบที่อยู่ข้างหลัง (หนาม, พายุ)
+  const behind=mode===0||mode===2;
+  const rm=mode===5?'seqfx':RM(), isSeq=rm==='seq'||rm==='seqfx';
+  if(behind&&!isSeq){pass(0,t);ctx.drawImage(glc,0,0);}
+  if(isSeq){const r=drawSeq(t,0); if(r)seqKey(r);} else sprites(0,t);
+  drawDummy(t);
+  if(showChar){const h=210,w=hero.width*h/hero.height;ctx.drawImage(hero,cx-w/2,H*0.77-h,w,h);}
+  if(!behind&&!isSeq){pass(0,t);ctx.drawImage(glc,0,0);}
+  if(isSeq){const r=drawSeq(t,1); if(r)seqKey(r); if(rm==='seqfx'&&mode===3)beastSkill(t,2); if(mode===5)swarmSkill(t,2); if(rm==='seqfx'&&mode!==3&&stepN>=6)seqParticles(t); }
+  else sprites(1,t);
+  if(!isSeq&&stepN>=5){pass(1,t);gx.clearRect(0,0,W,H);gx.drawImage(glc,0,0);ctx.save();ctx.globalCompositeOperation='lighter';
+    ctx.filter='blur(5px)';ctx.drawImage(gcv,0,0);ctx.filter='blur(18px)';ctx.globalAlpha=.9;ctx.drawImage(gcv,0,0);ctx.restore();}
+  ctx.restore();
+  requestAnimationFrame(frame);
+}
+function renderSteps(){const ol=document.getElementById('steps');ol.innerHTML='';STEPS[mode].forEach((s,i)=>{const li=document.createElement('li');li.innerHTML=s[0]+'<span class="tag">'+s[1]+'</span>';li.className=i+1===stepN?'cur':(i+1>stepN?'off':'');ol.append(li);});}
+document.querySelectorAll('#modes button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#modes button').forEach(x=>x.classList.remove('on'));b.classList.add('on');mode=+b.dataset.m;prog=0;renderSteps();});
+document.getElementById('step').oninput=e=>{stepN=+e.target.value;document.getElementById('stepv').textContent=stepN;renderSteps();};
+document.getElementById('prog').oninput=e=>{playing=false;document.getElementById('play').classList.remove('on');prog=+e.target.value;document.getElementById('pv').textContent=prog.toFixed(2);};
+document.getElementById('play').onclick=e=>{playing=!playing;e.target.classList.toggle('on',playing);};
+document.getElementById('fire').onclick=()=>{playing=false;document.getElementById('play').classList.remove('on');prog=0;prevP=0;once=true;};
+// =====================================================================
+//  สกิล "อสูรเงากลืนกิน" — โครง 4 ชั้นแบบเกมจริง (แกะจากคลิป Night Camp)
+//  ง้าง (วงเวท + พลังดูดเข้า + จอมืด) -> ปล่อย (อสูรพุ่ง + เงาซ้อน + เส้นความเร็ว)
+//  -> โดน (หยุดภาพ + แฟลช + วงแหวนกระแทก + ระเบิด + ตัวเลข/TOTAL) -> ค้าง (ควัน ประกาย แอ่งเงา)
+// =====================================================================
+const SK={LIFE:2.6, T:{charge:.62, lunge:.86, hit:.9, stop:.09}};
+function skTime(){ const s=prog*SK.LIFE, h=SK.T.hit, st=SK.T.stop; if(s<h)return s; if(s<h+st)return h; return s-st; } // hitstop
+const clamp01=x=>Math.min(1,Math.max(0,x));
+const ez={out:x=>1-Math.pow(1-clamp01(x),3),in:x=>{x=clamp01(x);return x*x*x;},
+  inout:x=>{x=clamp01(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;},back:x=>{x=clamp01(x);const c=1.7;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2);}};
+const tintRGB=()=>TINT[document.getElementById('tint').value].map(v=>Math.round(v*255));
+const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function frameOf(q,f,x,y,h,{ax=.5,ay=.5,a=1,sx=1,glow=1,hue=0}={}){ if(!q.F||!q.img.width||a<=0)return;
+  const w=q.fw*h/q.fh, hf=hue?`hue-rotate(${hue}deg) `:'';
+  ctx.save();ctx.translate(x,y);ctx.scale(sx,1);ctx.globalAlpha=a;if(hue)ctx.filter=hf;
+  ctx.drawImage(q.img,f*q.fw,0,q.fw,q.fh,-ax*w,-ay*h,w,h);
+  if(glow>0&&q.glow.width){ctx.globalCompositeOperation='lighter';ctx.filter=hf+'blur(7px)';ctx.globalAlpha=a*.8*glow;ctx.drawImage(q.glow,f*q.fw,0,q.fw,q.fh,-ax*w,-ay*h,w,h);
+    ctx.filter=hf+'blur(22px)';ctx.globalAlpha=a*.6*glow;ctx.drawImage(q.glow,f*q.fw,0,q.fw,q.fh,-ax*w,-ay*h,w,h);}
+  ctx.restore();}
+// ---- ตัวต่อ game feel (ใช้ซ้ำกับสกิลอื่นได้) ----
+function magicCircle(x,y,r,rot,a,col){ if(a<=0||r<=0)return;
+  ctx.save();ctx.translate(x,y);ctx.scale(1,.34);ctx.globalCompositeOperation='lighter';ctx.globalAlpha=a;
+  ctx.shadowColor=rgba(col,1);ctx.shadowBlur=18;ctx.strokeStyle=rgba(col,.95);
+  ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.stroke();
+  ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,r*.82,0,7);ctx.stroke();ctx.beginPath();ctx.arc(0,0,r*.38,0,7);ctx.stroke();
+  ctx.rotate(rot);ctx.lineWidth=2.5;ctx.beginPath();for(let i=0;i<=7;i++){const an=i*Math.PI*2/7*3;const px=Math.cos(an)*r*.8,py=Math.sin(an)*r*.8;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.stroke();
+  for(let i=0;i<24;i++){ctx.save();ctx.rotate(i/24*Math.PI*2);ctx.fillStyle=rgba(col,.9);ctx.fillRect(r*.86,-2,r*.08*(i%3?1:1.8),4);ctx.restore();}
+  ctx.rotate(-rot*2.3);ctx.setLineDash([10,8]);ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,r*.6,0,7);ctx.stroke();ctx.setLineDash([]);
+  ctx.restore();}
+function shockRing(x,y,k,maxR,col,width){ if(k<=0||k>=1)return; const r=maxR*ez.out(k);
+  ctx.save();ctx.translate(x,y);ctx.scale(1,.36);ctx.globalCompositeOperation='lighter';ctx.globalAlpha=1-k;
+  ctx.lineWidth=width*(1-k)+1;ctx.strokeStyle=rgba(col,1);ctx.shadowColor=rgba(col,1);ctx.shadowBlur=20;ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=Math.max(1,width*.3*(1-k));ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.stroke();ctx.restore();}
+function speedLines(x0,x1,y,a,col,seed){ if(a<=0)return; ctx.save();ctx.globalCompositeOperation='lighter';
+  for(let i=0;i<14;i++){const yy=y+(hsh(i+seed)-.5)*170, len=60+140*hsh(i+seed+3), xs=x0+(x1-x0)*hsh(i+seed+7);
+    ctx.globalAlpha=a*(.3+.5*hsh(i+seed+9));ctx.strokeStyle=i%3?rgba(col,1):'#fff';ctx.lineWidth=1+2*hsh(i+seed+11);ctx.beginPath();ctx.moveTo(xs,yy);ctx.lineTo(xs-len,yy);ctx.stroke();}
+  ctx.restore();}
+function dmgNum(txt,x,y,k,{size=26,col='#ffd34a',stroke='#2a0a3a',big=false}={}){ if(k<0||k>1)return;
+  const pop=k<.12?ez.back(k/.12):1, rise=big?0:ez.out(k)*40, a=k>.75?(1-k)/.25:1;
+  ctx.save();ctx.translate(x,y-rise);ctx.scale(pop,pop);ctx.globalAlpha=a;ctx.textAlign='center';ctx.font=`900 ${size}px system-ui`;
+  ctx.lineJoin='round';ctx.lineWidth=size*.22;ctx.strokeStyle=stroke;ctx.strokeText(txt,0,0);
+  if(big){const g=ctx.createLinearGradient(0,-size,0,0);g.addColorStop(0,'#fff6c8');g.addColorStop(1,col);ctx.fillStyle=g;}else ctx.fillStyle=col;
+  ctx.fillText(txt,0,0);ctx.restore();}
+function skillTitle(txt,x,y,k,col){ if(k<0||k>1)return; const a=k<.1?k/.1:k>.8?(1-k)/.2:1, sc=k<.1?.6+.4*ez.back(k/.1):1;
+  ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);ctx.globalAlpha=a;ctx.textAlign='center';ctx.font='900 24px system-ui';ctx.lineWidth=6;ctx.strokeStyle='#120a1c';ctx.strokeText(txt,0,0);
+  ctx.fillStyle='#fff';ctx.shadowColor=rgba(col,1);ctx.shadowBlur=14;ctx.fillText(txt,0,0);ctx.restore();}
+// ---- ตัวสกิล ----
+let skShook=false;
+function beastSkill(t,layer){
+  const q=SEQ[3], Bq=SEQ[1]; if(!q.F)return;
+  const s=skTime(), T=SK.T, col=tintRGB(), hue=HUE[document.getElementById('tint').value]||0;
+  const hx=W*.25, gy=H*.77, tx=W*TX, ty=H*.47;
+  const lungeK=clamp01((s-T.charge)/(T.lunge-T.charge)), afterHit=s-T.hit;
+  if(layer===0){ // ---------- ชั้นพื้น (ก่อนตัวละคร) ----------
+    const dim=clamp01(s/.35)*(1-clamp01((s-1.5)/.6))*.45; ctx.fillStyle=`rgba(5,0,12,${dim})`;ctx.fillRect(-20,-20,W+40,H+40);
+    const cIn=ez.back(clamp01(s/.3)), cOut=1-clamp01((s-T.lunge)/.25);
+    magicCircle(hx,gy,95*cIn,s*2.2,.9*cOut*Math.min(1,cIn),col);
+    if(afterHit>=0){
+      [0,.07,.16].forEach((d,i)=>shockRing(tx,gy,(afterHit-d)/(.45+i*.12),150+i*70,col,i?6:12));
+      const pud=clamp01(afterHit/.15)*(1-clamp01((afterHit-1)/.5));
+      ctx.save();ctx.translate(tx,gy);ctx.scale(1,.3);ctx.globalAlpha=pud*.8;
+      const g=ctx.createRadialGradient(0,0,10,0,0,150);g.addColorStop(0,'rgba(0,0,0,.95)');g.addColorStop(.7,'rgba(10,0,20,.6)');g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,150,0,7);ctx.fill();ctx.restore();}
+    return;}
+  if(layer===1){ // ---------- ชั้นหลัก ----------
+    if(s<T.charge){ // ง้าง: พลังดูดเข้า + อสูรก่อตัวจากควัน
+      ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let i=0;i<22;i++){const ph=((s*1.6+hsh(i))%1), an=hsh(i+40)*Math.PI*2, r=170*(1-ez.in(ph));
+        ctx.globalAlpha=ph*(1-clamp01((s-T.charge+.1)/.1));ctx.fillStyle=i%4?rgba(col,1):'#fff';
+        ctx.beginPath();ctx.ellipse(hx+Math.cos(an)*r,gy-90+Math.sin(an)*r*.6,2.5+2*hsh(i),1.5,an,0,7);ctx.fill();}
+      ctx.restore();
+      const form=ez.out((s-.08)/.3); frameOf(q,s<.4?0:1,hx-40,ty-25,270*(.75+.25*form),{ax:.6,ay:.5,a:form,glow:.9+.6*form,hue});
+    } else if(s<T.hit){ // ปล่อย: พุ่ง + เงาซ้อน + เส้นความเร็ว
+      const k=ez.inout(lungeK), x=hx-30+(tx+40-(hx-30))*k, st=1+.35*Math.sin(Math.PI*lungeK);
+      for(let g=3;g>=1;g--){const kk=ez.inout(clamp01(lungeK-g*.09)), gx=hx-30+(tx+40-(hx-30))*kk; frameOf(q,2,gx,ty,270,{ax:.8,ay:.5,a:.22*(1-g/4),sx:st,glow:0,hue});}
+      speedLines(hx,x,ty,.9,col,7);
+      frameOf(q,2,x,ty,270,{ax:.8,ay:.5,sx:st,glow:1.3,hue});
+    } else { // โดน: งับค้าง -> สลาย + ระเบิดความว่าง
+      const f=afterHit<.12?3:afterHit<.45?4:5, a=1-clamp01((afterHit-.55)/.5);
+      frameOf(q,f,tx+40,ty,270,{ax:.8,ay:.5,a,glow:f===3?2:1,hue,sx:f===3?.92:1});
+      if(Bq.F&&afterHit<Bq.F*.085+.1){const bf=Math.min(Bq.F-1,1+Math.floor(afterHit/.085)); frameOf(Bq,bf,tx,H*.5,470,{glow:1.2,hue,a:1-clamp01((afterHit-.6)/.2)});}
+      for(let i=0;i<10;i++){const lt=afterHit/.8;if(lt>1)break;const an=-Math.PI*.5+(hsh(i+60)-.5)*2.8, sp=260+220*hsh(i+61);
+        spr(i%2?'spark_'+(i%6):'rock_'+(i%8),tx+Math.cos(an)*sp*lt,H*.5+Math.sin(an)*sp*lt+380*lt*lt,i%2?34:22,{a:1-lt,rot:lt*9*(hsh(i)-.5),glow:1.3});}
+      for(let i=0;i<6;i++){const lt=(afterHit-.15)/1.3;if(lt<0||lt>1)continue;spr('smoke_'+i,tx+(hsh(i+70)-.5)*220,gy-40-lt*120-hsh(i+71)*60,40+40*lt,{a:(1-lt)*.75,glow:.4});}
+    }
+    if(afterHit>.2){ctx.save();ctx.globalCompositeOperation='lighter';for(let i=0;i<16;i++){const lt=((afterHit*.5+hsh(i+80))%1);
+      ctx.globalAlpha=(1-lt)*(1-clamp01((afterHit-1.2)/.4));ctx.fillStyle=rgba(col,1);ctx.beginPath();ctx.arc(tx+(hsh(i+81)-.5)*260,gy-lt*220,1.5+2*hsh(i+82),0,7);ctx.fill();}ctx.restore();}
+    return;}
+  // ---------- ชั้นบนสุด (จอ + UI) ----------
+  skillTitle('อสูรเงากลืนกิน!',hx,H*.77-245,s/1.1,col);
+  if(afterHit>=0&&afterHit<.1&&!skShook&&document.getElementById('shake').checked){shake=18;skShook=true;}
+  if(afterHit<0||afterHit>1.6)skShook=false;
+  if(afterHit>=0&&afterHit<.16){ctx.save();ctx.globalCompositeOperation='lighter';ctx.fillStyle=afterHit<.04?'rgba(255,255,255,.45)':rgba(col,.45*(1-afterHit/.16));ctx.fillRect(-20,-20,W+40,H+40);ctx.restore();}
+  const vig=clamp01(s/.3)*(1-clamp01((s-1.6)/.5));
+  if(vig>0){const g=ctx.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,H*.85);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(8,0,18,${.75*vig})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
+  const hits=[612,587,734,698,821,905];
+  hits.forEach((v,i)=>dmgNum(String(v),tx+(i%2?1:-1)*(30+60*hsh(i+90)),H*.42-i*24,(afterHit-.02-i*.07)/.75,{size:i===hits.length-1?32:24}));
+  const kt=(afterHit-.55)/1.1;
+  if(kt>=0&&kt<=1){dmgNum(String(hits.reduce((a,b)=>a+b)),tx-10,H*.2,kt,{size:54,big:true,col:'#ffb347'});
+    ctx.save();ctx.globalAlpha=kt>.75?(1-kt)/.25:1;ctx.textAlign='center';ctx.font='900 16px system-ui';ctx.lineWidth=5;ctx.strokeStyle='#120a1c';ctx.strokeText('TOTAL',tx-10,H*.2-50);ctx.fillStyle='#fff';ctx.fillText('TOTAL',tx-10,H*.2-50);ctx.restore();}
+}
+
+// =====================================================================
+//  Sprite + Code: sprite = ชิ้นส่วนที่มีชีวิต, โค้ดคุมตำแหน่ง/มุม/ขนาด/เวลา/จำนวน
+// =====================================================================
+// ช่วงเฟรม (clip) ของแต่ละ sprite
+const CLIPS={beast:{fly:[0,1],lunge:[2],bite:[3],fade:[4,5]}, burst:{all:[0,1,2,3,4,5,6,7]}, thorns:{all:[0,1,2,3,4,5,6,7]}};
+function clipFrame(clip,t,fps,loop){ const n=clip.length; let i=Math.floor(t*fps); i=loop?((i%n)+n)%n:Math.min(n-1,Math.max(0,i)); return clip[i]; }
+// เส้นทาง: quadratic bezier
+const bez=(a,b,c,k)=>{const u=1-k;return [u*u*a[0]+2*u*k*b[0]+k*k*c[0], u*u*a[1]+2*u*k*b[1]+k*k*c[1]];};
+const bezDir=(a,b,c,k)=>{const u=1-k;return [2*u*(b[0]-a[0])+2*k*(c[0]-b[0]), 2*u*(b[1]-a[1])+2*k*(c[1]-b[1])];};
+// วาด 1 instance: q=SEQ, f=frame, rot/scale/flip/alpha
+function inst(q,f,x,y,h,{rot=0,sx=1,a=1,ax=.5,ay=.5,glow=1,hue=0,flipY=false}={}){ if(!q.F||!q.img.width||a<=0||h<=0)return;
+  const w=q.fw*h/q.fh, hf=hue?`hue-rotate(${hue}deg) `:'';
+  ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.scale(sx,flipY?-1:1);ctx.globalAlpha=a;if(hue)ctx.filter=hf;
+  ctx.drawImage(q.img,f*q.fw,0,q.fw,q.fh,-ax*w,-ay*h,w,h);
+  if(glow>0&&q.glow.width){ctx.globalCompositeOperation='lighter';ctx.filter=hf+'blur(6px)';ctx.globalAlpha=a*.8*glow;ctx.drawImage(q.glow,f*q.fw,0,q.fw,q.fh,-ax*w,-ay*h,w,h);
+    ctx.filter=hf+'blur(18px)';ctx.globalAlpha=a*.55*glow;ctx.drawImage(q.glow,f*q.fw,0,q.fw,q.fh,-ax*w,-ay*h,w,h);}
+  ctx.restore();}
+
+// ---- สกิล "ฝูงอสูรเงา" ----
+const SW={LIFE:3.4};
+// อสูร 3 ตัว: ออกจากหลังผู้เล่น บินโค้งคนละทาง งับคนละเวลา (emitter แบบกำหนดเอง)
+const BEASTS=[ {t0:.55, dur:.62, h:150, cy:-170, hitDY:-40, side:-1},
+               {t0:.75, dur:.62, h:160, cy:130,  hitDY:30,  side:1},
+               {t0:1.15,dur:.40, h:280, cy:-30,  hitDY:0,   side:0, big:true} ];
+let swFired={};
+function swarmTime(){ // hitstop สั้นๆ ทุกครั้งที่อสูรงับ (ตัวใหญ่ค้างนานกว่า)
+  let s=prog*SW.LIFE; for(const b of BEASTS){const h=b.t0+b.dur, st=b.big?.12:.05; if(s>h&&s<h+st)return h; if(s>=h+st)s-=st;} return s;}
+function swarmSkill(t,layer){
+  const Q=SEQ[3], Bq=SEQ[1], Tq=SEQ[0]; if(!Q.F)return;
+  const s=swarmTime(), col=tintRGB(), hue=HUE[document.getElementById('tint').value]||0;
+  const hx=W*.25, gy=H*.77, tx=W*TX, ty=H*.5;
+  const last=BEASTS[2], lastHit=last.t0+last.dur;
+  if(layer===0){
+    const dim=clamp01(s/.35)*(1-clamp01((s-2.4)/.6))*.5; ctx.fillStyle=`rgba(5,0,12,${dim})`;ctx.fillRect(-20,-20,W+40,H+40);
+    magicCircle(hx,gy,100*ez.back(clamp01(s/.3)),s*2.4,.9*(1-clamp01((s-1.4)/.3)),col);
+    // วงเวทเล็งเป้า (บอกผู้เล่นว่าจะโดนตรงไหน)
+    magicCircle(tx,gy,80*ez.out(clamp01((s-.3)/.3)),-s*3,.7*(1-clamp01((s-lastHit)/.2)),col);
+    // หนามปะทุเป็นแนวใต้เป้าตอนตัวสุดท้ายงับ (sprite หนามหลายตัว คนละขนาด/เวลา/ด้าน)
+    if(Tq.F){ const xs=[-120,-70,-25,25,70,120];
+      xs.forEach((dx,i)=>{ const lt=s-lastHit-Math.abs(dx)/600; if(lt<0)return; const f=lt<.12?3:lt<.4?4:lt<.7?5:Math.min(7,6+Math.floor((lt-.7)*6));
+        if(lt>1.1)return; inst(Tq,f,tx+dx*1.6,gy+6,(300+160*hsh(i+3))*(1-Math.abs(dx)/320),{ay:.92,sx:hsh(i)>.5?1:-1,glow:1.1,hue,a:1-clamp01((lt-.8)/.3)}); }); }
+    BEASTS.forEach(b=>{const hit=s-(b.t0+b.dur); [0,.08].forEach((d,i)=>shockRing(tx,gy,(hit-d)/(b.big?.55:.35),(b.big?220:120)+i*60,col,b.big?12:6));});
+    return;}
+  if(layer===1){
+    // ง้าง: พลังดูดเข้า
+    if(s<.6){ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let i=0;i<24;i++){const ph=((s*1.8+hsh(i))%1), an=hsh(i+40)*Math.PI*2, r=170*(1-ez.in(ph));
+        ctx.globalAlpha=ph;ctx.fillStyle=i%4?rgba(col,1):'#fff';ctx.beginPath();ctx.ellipse(hx+Math.cos(an)*r,gy-90+Math.sin(an)*r*.6,2.5,1.5,an,0,7);ctx.fill();}ctx.restore();}
+    BEASTS.forEach((b,bi)=>{
+      const k=(s-b.t0)/b.dur, start=[hx-20,gy-120], ctrl=[ (hx+tx)/2, ty+b.cy ], end=[tx-20,ty+b.hitDY];
+      // ก่อตัว: ลอยขึ้นจากหลังผู้เล่น (ท่าบินวนลูป)
+      if(k<0){const pre=(s-(b.t0-.35))/.35; if(pre<0)return; const p=ez.out(pre);
+        inst(Q,clipFrame(CLIPS.beast.fly,t,6,true),start[0]-40+30*bi,start[1]-30*p+bi*10,b.h*(.5+.4*p),{ax:.75,a:p,glow:.8,hue}); return;}
+      if(k<1){ // บินโค้งไปหาเป้า: หันหัวตามทิศทาง, ยืดตามความเร็ว, เงาซ้อน
+        const kk=ez.inout(k), p=bez(start,ctrl,end,kk), d=bezDir(start,ctrl,end,kk), ang=Math.atan2(d[1],d[0]), st=1+.3*Math.sin(Math.PI*k);
+        for(let g=3;g>=1;g--){const kg=ez.inout(clamp01(k-g*.07)),pg=bez(start,ctrl,end,kg); inst(Q,2,pg[0],pg[1],b.h,{rot:ang,sx:st,ax:.8,a:.18*(1-g/4),glow:0,hue});}
+        inst(Q,k<.55?clipFrame(CLIPS.beast.fly,t,8,true):2,p[0],p[1],b.h,{rot:ang*.85,sx:st,ax:.8,glow:1.2,hue});
+        if(b.big)speedLines(hx,p[0],p[1],.9,col,bi*13);
+        return;}
+      // งับ -> สลาย
+      const a=s-(b.t0+b.dur); if(a>.8)return;
+      inst(Q,a<.1?3:a<.35?4:5,end[0],end[1],b.h*(a<.1?.95:1),{ax:.8,a:1-clamp01((a-.45)/.35),glow:a<.1?2:1,hue});
+      // ระเบิดความว่าง: ตัวเล็ก = ลูกเล็ก, ตัวใหญ่ = ลูกใหญ่
+      if(Bq.F){const bf=Math.min(7,1+Math.floor(a/.07)); inst(Bq,bf,tx+(b.big?0:(bi?40:-40)),ty+b.hitDY*.6,b.big?480:240,{glow:1.2,hue,a:1-clamp01((a-.5)/.25)});}
+      if(b.big)for(let i=0;i<12;i++){const lt=a/.8;const an=-Math.PI*.5+(hsh(i+60)-.5)*3, sp=260+240*hsh(i+61);
+        spr(i%2?'spark_'+(i%6):'rock_'+(i%8),tx+Math.cos(an)*sp*lt,ty+Math.sin(an)*sp*lt+380*lt*lt,i%2?34:22,{a:1-lt,rot:lt*9*(hsh(i)-.5),glow:1.3});}
+    });
+    // ฝุ่นประกายลอยตลอดสกิล (ทำให้ฉากแน่น)
+    ctx.save();ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<40;i++){const lt=((s*.35+hsh(i+100))%1), fade=clamp01(s/.4)*(1-clamp01((s-2.8)/.5));
+      ctx.globalAlpha=(1-lt)*fade*.8;ctx.fillStyle=i%5?rgba(col,1):'#fff';ctx.beginPath();ctx.arc(W*hsh(i+101),gy+20-lt*360,1+2*hsh(i+102),0,7);ctx.fill();}
+    ctx.restore();
+    return;}
+  // ---- จอ + UI ----
+  skillTitle('ฝูงอสูรเงา!',hx,gy-250,s/1.3,col);
+  BEASTS.forEach((b,bi)=>{const a=s-(b.t0+b.dur);
+    if(a>=0&&a<.08&&!swFired[bi]&&document.getElementById('shake').checked){shake=b.big?20:7;swFired[bi]=1;}
+    if(a<0)swFired[bi]=0;
+    if(a>=0&&a<(b.big?.16:.08)){ctx.save();ctx.globalCompositeOperation='lighter';ctx.fillStyle=a<.04&&b.big?'rgba(255,255,255,.45)':rgba(col,(b.big?.4:.18)*(1-a/(b.big?.16:.08)));ctx.fillRect(-20,-20,W+40,H+40);ctx.restore();}
+    const nums=b.big?[905,1210,1388]:[412+bi*37,388+bi*51];
+    nums.forEach((v,i)=>dmgNum(String(v),tx+(i%2?1:-1)*(30+50*hsh(i+bi*7+90))+(b.big?0:(bi?60:-60)),H*.42-i*26-(b.big?30:0),(a-.02-i*.06)/.75,{size:b.big?32:22,col:b.big?'#ff9a3a':'#ffd34a'}));});
+  const vig=clamp01(s/.3)*(1-clamp01((s-2.6)/.5));
+  if(vig>0){const g=ctx.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,H*.85);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(8,0,18,${.75*vig})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
+  const total=[0,1,2].reduce((acc,bi)=>acc+(bi===2?905+1210+1388:(412+bi*37)+(388+bi*51)),0), kt=(s-lastHit-.5)/1.2;
+  if(kt>=0&&kt<=1){dmgNum(String(total),tx-10,H*.13,kt,{size:56,big:true,col:'#ffb347'});
+    ctx.save();ctx.globalAlpha=kt>.75?(1-kt)/.25:1;ctx.textAlign='center';ctx.font='900 16px system-ui';ctx.lineWidth=5;ctx.strokeStyle='#120a1c';ctx.strokeText('TOTAL',tx-10,H*.13-52);ctx.fillStyle='#fff';ctx.fillText('TOTAL',tx-10,H*.13-52);ctx.restore();}
+}
+
+renderSteps();requestAnimationFrame(frame);
+</script>
+</body>
+</html>

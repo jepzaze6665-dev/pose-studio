@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Map Lab</title>
+<style>
+:root{--bg:#121019;--panel:#1d1a2c;--line:#2e2a45;--text:#ece8ff;--dim:#958fb8;--acc:#ffb347}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Segoe UI",Tahoma,sans-serif}
+.wrap{display:flex;gap:16px;padding:16px;flex-wrap:wrap;justify-content:center}
+.stage{position:relative}
+canvas#view{display:block;border-radius:12px;max-width:100%;height:auto;border:1px solid var(--line);background:#000;cursor:grab}
+canvas#ov{position:absolute;left:0;top:0;pointer-events:none;mix-blend-mode:screen;border-radius:12px}
+.side{width:320px;max-width:100%;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+h1{font-size:18px;margin:0 0 4px}.sub{color:var(--dim);font-size:13px;line-height:1.5}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+button{background:#2a2640;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;font-size:13px}
+button.on{background:var(--acc);border-color:var(--acc);color:#1a1200}
+label{font-size:13px;color:var(--dim);display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0}
+input[type=range]{width:100%} input[type=number]{width:90px;background:#14121f;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:inherit}
+.legend span{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage"><canvas id="view" width="960" height="600"></canvas><canvas id="ov" width="960" height="600"></canvas></div>
+  <div class="side">
+    <div class="card"><h1>Map Lab — เมืองเริ่มต้น</h1>
+      <div class="sub">ชุดของ 16 ชิ้น + <b>ใบสั่งแมพ + กฎ + seed</b> = เมืองทั้งผืน · ลากเพื่อเลื่อนกล้อง</div>
+      <div class="sub" id="stats" style="margin-top:6px"></div></div>
+    <div class="card">
+      <div class="row"><label style="margin:0">seed <input type="number" id="seed" value="23"></label><button id="gen">สร้างใหม่</button><button id="rnd">สุ่ม seed</button></div>
+      <div class="row" style="margin-top:8px"><button id="export">ส่งออกแมพ (JSON)</button></div>
+    </div>
+    <div class="card">
+      <div class="row" id="presets"><button data-h="7">เช้า</button><button data-h="12" class="on">เที่ยง</button><button data-h="17.5">เย็น</button><button data-h="22">คืน</button></div>
+      <label style="margin-top:8px"><span>เวลา</span><b id="hv">12:00</b></label>
+      <input type="range" id="hour" min="0" max="24" step="0.05" value="12">
+      <label><span>หมุนเวลาเอง (1 วัน = 24 วิ)</span><input type="checkbox" id="auto"></label>
+    </div>
+    <div class="card">
+      <b style="font-size:13px">ชั้น</b>
+      <label><span>แสงแดด + normal map</span><input type="checkbox" id="L_light" checked></label>
+      <label><span>รายละเอียดพื้น (TK-5)</span><input type="checkbox" id="L_decal" checked onchange="buildGround()"></label>
+      <label><span>เงาสัมผัสพื้น (ไม่ลอย)</span><input type="checkbox" id="L_ao" checked></label>
+      <label><span>เงาทอดตามแดด</span><input type="checkbox" id="L_shadow" checked></label>
+      <label><span>ไฟกลางคืน + แสงส่องพื้น</span><input type="checkbox" id="L_night" checked></label>
+      <label><span>แสงฟุ้ง (bloom)</span><input type="checkbox" id="L_bloom" checked></label>
+      <label><span>ป้ายเกม (ชน/บัง/แสง/วาร์ป)</span><input type="checkbox" id="L_tags"></label>
+      <label><span>ดู normal map</span><input type="checkbox" id="L_normal"></label>
+      <div class="sub legend"><span style="background:#ff5a6a"></span>ชน<span style="background:#5aa8ff"></span>บังตัวละคร<span style="background:#ffd166"></span>แสง<span style="background:#b45cff"></span>วาร์ป/โต้ตอบ</div>
+    </div>
+  </div>
+</div>
+<script>
+// ====================== ชุดของ (kit) + ป้ายเกม ======================
+const K='../assets/maps/town/kit/';
+const KIT_DEF={ // h = ความสูงบนจอ, tags = สิ่งที่เกมต้องรู้ (หลักที่ 1)
+  guild_hall:{h:300,tags:['ชน','บัง'],night:1}, inn:{h:250,tags:['ชน','บัง'],night:1}, weapon_shop:{h:215,tags:['ชน','บัง'],night:1},
+  item_shop:{h:215,tags:['ชน','บัง'],night:1}, house:{h:195,tags:['ชน','บัง'],night:1},
+  fountain:{h:210,tags:['ชน']}, waystone:{h:170,tags:['ชน','วาร์ป','แสง'],glow:1}, quest_board:{h:140,tags:['ชน','โต้ตอบ']},
+  lamp:{h:125,tags:['ชน','แสง'],night:1,light:{dy:-.55,r:150}}, tree:{h:210,tags:['ชน','บัง']}, bush:{h:62,tags:['ผ่านได้']},
+  stall:{h:125,tags:['ชน','โต้ตอบ']}, well:{h:120,tags:['ชน']}, barrels:{h:72,tags:['ชน']}, fence:{h:58,tags:['ชน']}, bench:{h:55,tags:['ผ่านได้']}};
+const KIT={};const load=s=>{const i=new Image();i.src=s;return i;};
+for(const n in KIT_DEF){const d=KIT_DEF[n];KIT[n]={...d,a:load(K+n+'.png'),n:load(K+n+'_n.png')};if(d.night)KIT[n].night=load(K+n+'_night.png');if(d.glow)KIT[n].glowI=load(K+n+'_glow.png');}
+KIT.waystone.crystal={a:load(K+'waystone_crystal.png'),n:load(K+'waystone_crystal_n.png'),g:load(K+'waystone_crystal_glow.png')};
+const GROUND={grass:load(K+'ground_grass.png'),cobble:load(K+'ground_cobble.png')};
+const DECAL={};for(const n of ['tuft_0','tuft_1','tuft_2','tuft_3','pebbles_0','pebbles_1','dirt_0','dirt_1','leaves_0','leaves_1','flowers_0','flowers_1','stones_0','stones_1','puddle','moss'])DECAL[n]=load(K+'decal_'+n+'.png');
+const hero=load('../assets/characters/knight/master_cut.png');
+const ok=i=>i&&i.complete&&i.naturalWidth>0;
+const wOf=o=>{const im=KIT[o.k].a;return ok(im)?im.width*KIT[o.k].h/im.height:KIT[o.k].h;};
+
+// ====================== ใบสั่งแมพ (ข้อมูลระดับสูง ~1KB) ======================
+const RECIPE={name:'เมืองเริ่มต้น',W:2400,H:1600,
+  plaza:{x:1200,y:860,rx:330,ry:200},
+  roads:[[[1200,860],[1200,60]],[[1200,860],[2360,860]],[[1200,860],[40,860]],[[1200,860],[1200,1560]]],
+  landmarks:[{k:'fountain',x:1200,y:900},{k:'guild_hall',x:1200,y:560},{k:'waystone',x:1480,y:1000},{k:'quest_board',x:960,y:700}],
+  shops:['inn','weapon_shop','item_shop'],
+  warps:[{to:'ทุ่งหญ้าลมเย็น',x:2330,y:860},{to:'ป่ารากมืด',x:1200,y:1540},{to:'ท่าเรือ',x:70,y:860}],
+  safe:{x:1200,y:860,r:700}};
+
+// ====================== ตัวสร้าง: กฎ + seed ======================
+let MAP=null;
+function generate(seed){
+  let s=seed>>>0||1;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  const R=RECIPE, objs=[], roadW=70;
+  const segDist=(x,y,[a,b])=>{const dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy)));return Math.hypot(x-(a[0]+dx*t),(y-(a[1]+dy*t))*1.6);};
+  const roadD=(x,y)=>Math.min(...R.roads.map(sg=>segDist(x,y,sg)));
+  const inPlaza=(x,y,m=0)=>((x-R.plaza.x)/(R.plaza.rx+m))**2+((y-R.plaza.y)/(R.plaza.ry+m*.6))**2<1;
+  const fits=(o)=>{const w=wOf(o)*.42;if(o.x<w||o.x>R.W-w||o.y<KIT[o.k].h*.5||o.y>R.H-10)return false;
+    for(const p of objs){const pw=wOf(p)*.42;if(Math.abs(p.x-o.x)<pw+w&&Math.abs(p.y-o.y)<(pw+w)*.45)return false;}return true;};
+  const add=(o,force)=>{if(force||fits(o)){objs.push(o);return true;}return false;};
+  // 1) จุดสำคัญ (วางเอง)
+  for(const l of R.landmarks)add({...l,manual:true},true);
+  // 2) ร้านค้ารอบลาน (กฎ: หน้าร้านหันเข้าถนน ห่างถนน > ครึ่งความกว้าง)
+  const ring=[[-.95,-.55],[.95,-.55],[-.9,.75]];R.shops.forEach((k,i)=>{const [fx,fy]=ring[i];
+    add({k,x:R.plaza.x+fx*(R.plaza.rx+190),y:R.plaza.y+fy*(R.plaza.ry+120)},true);});
+  // 3) บ้านเรียงสองข้างถนน (กฎ: ไม่ทับถนน, ห่างกัน, ไม่อยู่ในลาน)
+  for(const [a,b] of R.roads){const L=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/L,uy=(b[1]-a[1])/L;
+    for(let d=R.plaza.rx+160;d<L-120;d+=150+r()*90){for(const side of [-1,1]){if(r()<.25)continue;
+      const off=roadW+90+r()*40, x=a[0]+ux*d-uy*side*off, y=a[1]+uy*d+ux*side*off*.6;
+      if(!inPlaza(x,y,120))add({k:r()<.85?'house':'inn',x,y});}}}
+  // 4) โคมตามถนน (กฎ: ทุก ~230px สลับฝั่ง ชิดขอบถนน)
+  for(const [a,b] of R.roads){const L=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/L,uy=(b[1]-a[1])/L;let side=1;
+    for(let d=R.plaza.rx+80;d<L-60;d+=300){side=-side;const x=a[0]+ux*d-uy*side*(roadW+18),y=a[1]+uy*d+ux*side*(roadW+18)*.6;add({k:'lamp',x,y});}}
+  for(let i=0;i<6;i++){const an=i/6*Math.PI*2+.5;add({k:'lamp',x:R.plaza.x+Math.cos(an)*(R.plaza.rx+45),y:R.plaza.y+Math.sin(an)*(R.plaza.ry+30)});}
+  // 5) แผงตลาด + ม้านั่งรอบลาน
+  for(let i=0;i<10;i++){const an=r()*Math.PI*2;add({k:r()<.6?'stall':'bench',x:R.plaza.x+Math.cos(an)*R.plaza.rx*.8,y:R.plaza.y+Math.sin(an)*R.plaza.ry*.8});}
+  // 6) ของข้างบ้าน: ถัง/ลัง พุ่มไม้ (กฎ: อยู่ชิดอาคาร)
+  for(const o of [...objs])if(['house','inn','weapon_shop','item_shop'].includes(o.k)){const w=wOf(o)*.5;
+    if(r()<.6)add({k:'barrels',x:o.x+(r()<.5?-1:1)*(w+30),y:o.y+10});for(let j=0;j<2;j++)if(r()<.7)add({k:'bush',x:o.x+(r()-.5)*w*2,y:o.y+25+r()*20});}
+  // 7) บ่อน้ำ 2 จุด
+  for(let i=0;i<40&&objs.filter(o=>o.k==='well').length<2;i++){const x=300+r()*(R.W-600),y=300+r()*(R.H-600);if(roadD(x,y)>130&&!inPlaza(x,y,150))add({k:'well',x,y});}
+  // 8) ต้นไม้เป็นกลุ่มในพื้นหญ้า (กฎ: ห้ามบังถนน = ห่างถนน > 150, ห่างอาคาร)
+  for(let c=0;c<26;c++){const cx=r()*R.W,cy=r()*R.H;for(let j=0;j<5;j++){const x=cx+(r()-.5)*260,y=cy+(r()-.5)*160;
+    if(roadD(x,y)>150&&!inPlaza(x,y,220))add({k:r()<.75?'tree':'bush',x,y});}}
+  // 9) รั้วขอบเมือง (กฎ: เว้นช่องที่ถนนผ่าน)
+  for(let x=60;x<R.W;x+=62)for(const y of [150,R.H-40]){if(roadD(x,y)>110)add({k:'fence',x,y});}
+  // 10) จุดเกิดผู้เล่น
+  MAP={seed,objs,spawn:{x:R.plaza.x+120,y:R.plaza.y+140}};
+  buildGround();
+  const cnt={};objs.forEach(o=>cnt[o.k]=(cnt[o.k]||0)+1);
+  document.getElementById('stats').innerHTML=`วางเอง <b>${objs.filter(o=>o.manual).length}</b> ชิ้น · ตัวสร้างวาง <b>${objs.filter(o=>!o.manual).length}</b> ชิ้น · ใช้ภาพ ${Object.keys(KIT).length} แบบ`;
+}
+// พื้น: หญ้าทั้งผืน + ถนนหิน + ลาน (texture ต่อกันได้จาก TK-4)
+const groundC=document.createElement('canvas');
+function buildGround(){const R=RECIPE;groundC.width=R.W;groundC.height=R.H;const g=groundC.getContext('2d');
+  const pat=(im,sc)=>{const p=g.createPattern(im,'repeat');p.setTransform(new DOMMatrix().scale(sc,sc*.62));return p;}; // บีบตามมุมกล้อง
+  g.fillStyle=ok(GROUND.grass)?pat(GROUND.grass,.7):'#6f9a52';g.fillRect(0,0,R.W,R.H);
+  const cob=ok(GROUND.cobble)?pat(GROUND.cobble,.45):'#b8a68a';
+  g.save();g.beginPath();for(const [a,b] of R.roads){g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);}g.lineWidth=140;g.lineCap='round';
+  g.strokeStyle='rgba(60,40,20,.35)';g.lineWidth=152;g.stroke();g.strokeStyle=cob;g.lineWidth=140;g.stroke();
+  g.beginPath();g.ellipse(R.plaza.x,R.plaza.y,R.plaza.rx+70,R.plaza.ry+45,0,0,7);g.fillStyle='rgba(60,40,20,.35)';g.fill();
+  g.beginPath();g.ellipse(R.plaza.x,R.plaza.y,R.plaza.rx+62,R.plaza.ry+40,0,0,7);g.fillStyle=cob;g.fill();g.restore();
+  // รายละเอียดพื้น (decals): ของ "งอก" จากพื้นแทนการวางทับ — อบลงพื้นครั้งเดียว
+  if(MAP&&document.getElementById('L_decal').checked){let s2=(MAP.seed*7919)>>>0||3;const rr=()=>{s2=(s2*16807)%2147483647;return s2/2147483647;};
+    const dec=(n,x,y,w)=>{const im=DECAL[n];if(!ok(im))return;const h=im.height*w/im.width;g.save();g.translate(x,y);if(rr()<.5)g.scale(-1,1);g.drawImage(im,-w/2,-h*.75,w,h);g.restore();};
+    const pick=a=>a[Math.floor(rr()*a.length)];
+    for(let i=0;i<15;i++)dec(pick(['dirt_0','dirt_1']),rr()*R.W,rr()*R.H,60+rr()*60);
+    for(let i=0;i<12;i++)dec('moss',rr()*R.W,rr()*R.H,40+rr()*30);
+    for(let i=0;i<160;i++)dec(pick(['tuft_0','tuft_1','tuft_1','tuft_2']),rr()*R.W,rr()*R.H,16+rr()*22);
+    for(let i=0;i<45;i++)dec(pick(['flowers_0','flowers_1']),rr()*R.W,rr()*R.H,24+rr()*14);
+    // ริมถนน: กรวด/หินหลุด
+    for(const [a,b] of R.roads){const L=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/L,uy=(b[1]-a[1])/L;
+      for(let d=R.plaza.rx;d<L;d+=55+rr()*60){const sd=rr()<.5?-1:1,off=62+rr()*18;dec(pick(['pebbles_0','pebbles_1','tuft_0','stones_0']),a[0]+ux*d-uy*sd*off,a[1]+uy*d+ux*sd*off*.62,18+rr()*16);}}
+    // ในลาน: หินแตก + แอ่งน้ำ
+    for(let i=0;i<22;i++){const an=rr()*6.28,rd=Math.sqrt(rr());dec(pick(['stones_0','stones_1','pebbles_0']),R.plaza.x+Math.cos(an)*R.plaza.rx*rd,R.plaza.y+Math.sin(an)*R.plaza.ry*rd,30+rr()*26);}
+    for(let i=0;i<2;i++){const an=rr()*6.28;dec('puddle',R.plaza.x+Math.cos(an)*R.plaza.rx*.6,R.plaza.y+Math.sin(an)*R.plaza.ry*.6,50+rr()*20);}
+    // รอบฐานของ: หญ้าชิดผนัง ดอกไม้ ใบไม้ใต้ต้นไม้ (กฎ: ตามป้ายของแต่ละชิ้น)
+    for(const o of MAP.objs){const w=wOf(o)*.5,k=o.k;
+      if(k==='tree'){for(let j=0;j<3;j++)dec(pick(['leaves_0','leaves_1']),o.x+(rr()-.5)*w*2.2,o.y+(rr()-.3)*w*.5,22+rr()*14);dec(pick(['tuft_1','tuft_2']),o.x+(rr()-.5)*w,o.y+4,26+rr()*10);continue;}
+      if(KIT[k].tags.includes('บัง')){for(let j=0;j<5;j++){const sx=(rr()*2-1);dec(pick(['tuft_1','tuft_2','tuft_3','flowers_0','moss']),o.x+sx*w*.95,o.y+2+Math.abs(sx)*-w*.25+rr()*10,24+rr()*22);}continue;}
+      if(['lamp','fence','well','bench','stall','barrels','quest_board','waystone','fountain'].includes(k))for(let j=0;j<2;j++)dec(pick(['tuft_0','tuft_1','pebbles_0']),o.x+(rr()-.5)*w*1.6,o.y+3+rr()*6,16+rr()*12);}}
+  // วาร์ป: วงแสงบนพื้น
+  for(const w of R.warps){g.save();g.translate(w.x,w.y);g.scale(1,.45);const gr=g.createRadialGradient(0,0,10,0,0,80);gr.addColorStop(0,'rgba(160,220,255,.9)');gr.addColorStop(.6,'rgba(90,150,255,.4)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.beginPath();g.arc(0,0,80,0,7);g.fill();g.restore();}}
+
+// ====================== เรนเดอร์ (albedo / normal / เงา / ไฟ → WebGL) ======================
+const view=document.getElementById('view'),VW=view.width,VH=view.height;
+const C=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
+const albedo=C(VW,VH),normal=C(VW,VH),emis=C(VW,VH),shadowC=C(VW,VH);
+const ax=albedo.getContext('2d'),nx=normal.getContext('2d'),ex=emis.getContext('2d'),sx=shadowC.getContext('2d');
+let cam={x:1200-VW/2,y:860-VH/2};
+function visible(o,pad=320){return o.x>cam.x-pad&&o.x<cam.x+VW+pad&&o.y>cam.y-60&&o.y<cam.y+VH+pad*1.2;}
+function drawObj(g,o,which,t){const k=KIT[o.k],im=which==='a'?k.a:k.n;if(!ok(im))return;const w=im.width*k.h/im.height,x=o.x-cam.x,y=o.y-cam.y;
+  g.drawImage(im,x-w/2,y-k.h*.97,w,k.h);
+  if(o.k==='waystone'){const c=k.crystal,ci=which==='a'?c.a:c.n;if(ok(ci)){const ch=k.h*.2,cw=ci.width*ch/ci.height;g.drawImage(ci,x-cw/2-k.h*.04,y-k.h*1.12+Math.sin(t*2)*5,cw,ch);}}}
+const AO_W=k=>({tree:.32,lamp:.55,fence:.5,bench:.5,bush:.5,barrels:.5,stall:.5,well:.5}[k]||.52);
+function scene(g,which,t){
+  if(which==='a')g.drawImage(groundC,cam.x,cam.y,VW,VH,0,0,VW,VH);else{g.fillStyle='rgb(128,128,255)';g.fillRect(0,0,VW,VH);}
+  const list=MAP.objs.filter(o=>visible(o));const h={hero:1,x:MAP.spawn.x,y:MAP.spawn.y};list.push(h);
+  if(which==='a'&&document.getElementById('L_ao').checked){ // เงาสัมผัสพื้น (contact shadow): ทำให้ของ "ยืนบนพื้น" ไม่ลอย
+    for(const o of list){const w=o.hero?34:wOf(o)*AO_W(o.k),x=o.x-cam.x,y=o.y-cam.y-(o.hero?0:KIT[o.k].h*.03);
+      g.save();g.translate(x,y);g.scale(1,.32);const gr=g.createRadialGradient(0,0,w*.2,0,0,w);
+      gr.addColorStop(0,'rgba(20,14,8,.7)');gr.addColorStop(.6,'rgba(20,14,8,.38)');gr.addColorStop(1,'rgba(20,14,8,0)');g.fillStyle=gr;g.beginPath();g.arc(0,0,w,0,7);g.fill();g.restore();
+      if(!o.hero&&KIT[o.k].tags.includes('บัง')&&o.k!=='tree'){ // ดินรอบฐานอาคาร
+        g.save();g.translate(x,y-4);g.scale(1,.3);g.globalAlpha=.35;g.fillStyle='#6b5236';g.beginPath();g.arc(0,0,w*.95,0,7);g.fill();g.restore();}}}
+  list.sort((a,b)=>a.y-b.y);
+  for(const o of list){if(o.hero){if(!ok(hero))continue;const hh=110,w=hero.width*hh/hero.height,x=o.x-cam.x,y=o.y-cam.y;
+      g.save();g.drawImage(hero,x-w/2,y-hh,w,hh);if(which==='n'){g.globalCompositeOperation='source-atop';g.fillStyle='rgb(128,128,255)';g.fillRect(x-w/2,y-hh,w,hh);}g.restore();continue;}
+    drawObj(g,o,which,t);}}
+function shadows(g,sun){g.clearRect(0,0,VW,VH);if(sun.elev<=0.02)return;
+  const len=Math.min(2.2,.35/Math.max(.12,sun.elev)),dx=-Math.cos(sun.az)*len;
+  for(const o of MAP.objs){if(!visible(o)||KIT[o.k].h<50)continue;const k=KIT[o.k],im=k.a;if(!ok(im))continue;const w=im.width*k.h/im.height,x=o.x-cam.x,y=o.y-cam.y;
+    const by=y-k.h*.04;g.save();g.translate(x,by);g.transform(1,0,dx,-.5,0,0);g.translate(-x,-by);g.drawImage(im,x-w/2,y-k.h*.97,w,k.h);g.restore();}
+  g.globalCompositeOperation='source-in';g.fillStyle='#000';g.fillRect(0,0,VW,VH);g.globalCompositeOperation='source-over';}
+function emissive(g,t,night){g.clearRect(0,0,VW,VH);if(night<=0)return;
+  // แสงส่องพื้นรอบโคม/หินวาร์ป (point light) — วาดก่อน แล้วหน้าต่างทับ
+  g.globalCompositeOperation='lighter';
+  for(const o of MAP.objs){if(!visible(o,200))continue;const k=KIT[o.k],x=o.x-cam.x,y=o.y-cam.y;
+    if(k.light||o.k==='waystone'){const r=o.k==='waystone'?190:k.light.r,col=o.k==='waystone'?'120,200,255':'255,180,90',fl=.85+.15*Math.sin(t*5+o.x);
+      g.save();g.translate(x,y);g.scale(1,.55);const gr=g.createRadialGradient(0,0,0,0,0,r);gr.addColorStop(0,`rgba(${col},${.55*night*fl})`);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.beginPath();g.arc(0,0,r,0,7);g.fill();g.restore();}}
+  g.globalCompositeOperation='source-over';
+  for(const o of MAP.objs){if(!visible(o))continue;const k=KIT[o.k],x=o.x-cam.x,y=o.y-cam.y;const w=ok(k.a)?k.a.width*k.h/k.a.height:0;
+    if(k.night&&ok(k.night)){g.globalAlpha=night*(.85+.15*Math.sin(t*3+o.x));g.drawImage(k.night,x-w/2,y-k.h*.97,w,k.h);}
+    if(k.glowI&&ok(k.glowI)){g.globalAlpha=night;g.drawImage(k.glowI,x-w/2,y-k.h*.97,w,k.h);
+      const c=k.crystal.g;if(ok(c)){const ch=k.h*.2,cw=c.width*ch/c.height;g.drawImage(c,x-cw/2-k.h*.04,y-k.h*1.12+Math.sin(t*2)*5,cw,ch);}}}
+  g.globalAlpha=1;}
+function sunAt(h){const k=(h-6)/12,elev=Math.max(0,Math.sin(Math.PI*k)),az=Math.PI*(1-k);
+  const keys=[[0,[.35,.42,.75],.42],[5.5,[.45,.45,.75],.42],[7,[1,.62,.55],.6],[9,[1,.93,.85],.72],[12,[1,1,.97],.78],[15.5,[1,.95,.85],.72],[17.5,[1,.75,.45],.6],[19,[.6,.45,.6],.4],[20.5,[.38,.42,.75],.42],[24,[.35,.42,.75],.42]];
+  let a=keys[0],b=keys[keys.length-1];for(let i=0;i<keys.length-1;i++)if(h>=keys[i][0]&&h<=keys[i+1][0]){a=keys[i];b=keys[i+1];break;}
+  const s=(h-a[0])/Math.max(1e-6,b[0]-a[0]),mix=(u,v)=>u.map((x,i)=>x+(v[i]-x)*s),night=h<5.5||h>19.5?1:h<7?(7-h)/1.5:h>18?(h-18)/1.5:0;
+  return {az,elev,col:mix(a[1],b[1]),amb:a[2]+(b[2]-a[2])*s,night:Math.min(1,Math.max(0,night))};}
+const gl=view.getContext('webgl',{premultipliedAlpha:false});
+const vs=`attribute vec2 p;varying vec2 uv;void main(){uv=p*.5+.5;uv.y=1.-uv.y;gl_Position=vec4(p,0,1);}`;
+const fs=`precision mediump float;varying vec2 uv;uniform sampler2D A,N,S,EM;uniform vec3 sunDir,sunCol;uniform float amb,useLight,useShadow,showN,night;
+void main(){vec4 a=texture2D(A,uv);vec3 n=normalize(texture2D(N,uv).rgb*2.-1.);
+ if(showN>.5){gl_FragColor=vec4(texture2D(N,uv).rgb,1.);return;}
+ float d=max(dot(n,normalize(sunDir)),0.);float sh=useShadow>.5?texture2D(S,uv).a*.55:0.;
+ vec3 light=useLight>.5?vec3(amb*.78)*(1.-sh*.35)+sunCol*d*.55*(1.-sh)*(1.-night*.7):vec3(1.);
+ light*=useLight>.5?mix(vec3(1.),vec3(.55,.62,1.),night*.6):vec3(1.);
+ vec4 e=texture2D(EM,uv);
+ gl_FragColor=vec4(a.rgb*(light+e.rgb*e.a*1.2)+e.rgb*e.a*.5,1.);}`;
+function shd(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(o);return o;}
+const pr=gl.createProgram();gl.attachShader(pr,shd(gl.VERTEX_SHADER,vs));gl.attachShader(pr,shd(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);gl.useProgram(pr);
+gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const pl=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(pl);gl.vertexAttribPointer(pl,2,gl.FLOAT,false,0,0);
+const TX=['A','N','S','EM'].map((nm,i)=>{const t=gl.createTexture();gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,t);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.uniform1i(gl.getUniformLocation(pr,nm),i);return t;});
+const U=n=>gl.getUniformLocation(pr,n);
+const ov=document.getElementById('ov'),ovx=ov.getContext('2d');
+function tagsOverlay(){ovx.clearRect(0,0,VW,VH);
+  if(document.getElementById('L_bloom').checked){ovx.filter='blur(14px)';ovx.drawImage(emis,0,0);ovx.filter='blur(36px)';ovx.drawImage(emis,0,0);ovx.filter='none';}
+  if(!document.getElementById('L_tags').checked)return;
+  for(const o of MAP.objs){if(!visible(o))continue;const t=KIT[o.k].tags,x=o.x-cam.x,y=o.y-cam.y,w=wOf(o)*.42;
+    const col=t.includes('วาร์ป')||t.includes('โต้ตอบ')?'#b45cff':t.includes('แสง')?'#ffd166':t.includes('บัง')?'#5aa8ff':t.includes('ชน')?'#ff5a6a':'#7be39b';
+    ovx.strokeStyle=col;ovx.lineWidth=2;ovx.beginPath();ovx.ellipse(x,y,w,w*.4,0,0,7);ovx.stroke();}
+  for(const w of RECIPE.warps){const x=w.x-cam.x,y=w.y-cam.y;ovx.fillStyle='#b45cff';ovx.font='700 13px system-ui';ovx.textAlign='center';ovx.fillText('วาร์ป → '+w.to,x,y-30);}}
+let hour=12,last=performance.now();
+function frame(ms){const dt=(ms-last)/1000;last=ms;const t=ms/1000;
+  if(MAP){
+  if(document.getElementById('auto').checked){hour=(hour+dt)%24;document.getElementById('hour').value=hour;}
+  const hh=Math.floor(hour),mm=Math.floor((hour-hh)*60);document.getElementById('hv').textContent=`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+  const sun=sunAt(hour);
+  ax.clearRect(0,0,VW,VH);scene(ax,'a',t);nx.clearRect(0,0,VW,VH);scene(nx,'n',t);shadows(sx,sun);
+  emissive(ex,t,document.getElementById('L_night').checked?sun.night:0);
+  [albedo,normal,shadowC,emis].forEach((c,i)=>{gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,TX[i]);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,c);});
+  const el=Math.max(.15,sun.elev);gl.uniform3f(U('sunDir'),Math.cos(sun.az)*(1-el)*1.2,-.35,el+.25);
+  gl.uniform3fv(U('sunCol'),sun.col);gl.uniform1f(U('amb'),sun.amb);gl.uniform1f(U('night'),sun.night);
+  gl.uniform1f(U('useLight'),document.getElementById('L_light').checked?1:0);gl.uniform1f(U('useShadow'),document.getElementById('L_shadow').checked?1:0);
+  gl.uniform1f(U('showN'),document.getElementById('L_normal').checked?1:0);
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);tagsOverlay();}
+  requestAnimationFrame(frame);}
+// ---- UI ----
+function fitOv(){const r=view.getBoundingClientRect();ov.style.width=r.width+'px';ov.style.height=r.height+'px';}addEventListener('resize',fitOv);setTimeout(fitOv,50);
+let drag=null;view.onmousedown=e=>{drag={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y};view.style.cursor='grabbing';};
+addEventListener('mouseup',()=>{drag=null;view.style.cursor='grab';});
+addEventListener('mousemove',e=>{if(!drag)return;const s=VW/view.getBoundingClientRect().width;cam.x=Math.max(0,Math.min(RECIPE.W-VW,drag.cx-(e.clientX-drag.x)*s));cam.y=Math.max(0,Math.min(RECIPE.H-VH,drag.cy-(e.clientY-drag.y)*s));});
+document.getElementById('hour').oninput=e=>{hour=+e.target.value;document.getElementById('auto').checked=false;};
+document.querySelectorAll('#presets button').forEach(b=>b.onclick=()=>{hour=+b.dataset.h;document.getElementById('hour').value=hour;document.getElementById('auto').checked=false;document.querySelectorAll('#presets button').forEach(x=>x.classList.toggle('on',x===b));});
+document.getElementById('gen').onclick=()=>generate(+document.getElementById('seed').value);
+document.getElementById('rnd').onclick=()=>{const v=1+Math.floor(Math.random()*99999);document.getElementById('seed').value=v;generate(v);};
+document.getElementById('export').onclick=()=>{const out={...RECIPE,seed:MAP.seed,spawn:MAP.spawn,objects:MAP.objs.map(o=>({k:o.k,x:Math.round(o.x),y:Math.round(o.y),tags:KIT[o.k].tags,manual:!!o.manual}))};
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,1)],{type:'application/json'}));a.download='town.json';a.click();};
+// รอภาพโหลดก่อนสร้าง (ต้องรู้ความกว้างแต่ละชิ้นเพื่อกันทับกัน)
+(function waitLoad(){const all=[...Object.values(KIT).map(k=>k.a),GROUND.grass,GROUND.cobble,...Object.values(DECAL)];if(all.every(ok)){generate(+document.getElementById('seed').value);}else setTimeout(waitLoad,100);})();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
