@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><title>Re-Ask Prompt Book</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+@page{size:A4;margin:14mm 13mm 16mm}
+:root{--ink:#1d1a2c;--dim:#5d5878;--acc:#c27a12;--box:#f4f1fb;--line:#d8d2ea;--nav:#1b1830}
+*{box-sizing:border-box}
+body{font-family:Sarabun,Tahoma,sans-serif;color:var(--ink);font-size:10.6pt;line-height:1.55;margin:0}
+h1{font-size:22pt;margin:0 0 4mm;color:var(--nav)} h2{font-size:15pt;margin:0 0 3mm;color:var(--nav);border-bottom:2px solid var(--acc);padding-bottom:1.5mm}
+h3{font-size:11.5pt;margin:5mm 0 1.5mm;color:var(--nav)}
+.ch{page-break-before:always} .cover{height:255mm;display:flex;flex-direction:column;justify-content:center;background:var(--nav);color:#fff;margin:-14mm -13mm 0;padding:20mm}
+.cover h1{color:#ffd166;font-size:34pt}.cover p{color:#d9d4f2;font-size:13pt}
+pre{font-family:"JetBrains Mono",Consolas,monospace;font-size:8.3pt;line-height:1.45;background:var(--box);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:4px;padding:2.5mm 3mm;white-space:pre-wrap;margin:1.5mm 0 2mm;page-break-inside:avoid}
+.meta{font-size:9.4pt;color:var(--dim);margin:0 0 1mm} .meta b{color:var(--ink)}
+.chk{font-size:9.4pt;margin:0 0 3mm;padding-left:5mm} .chk li{margin:0}
+.note{background:#fff6e5;border:1px solid #f0d49c;border-radius:4px;padding:2mm 3mm;font-size:9.6pt;margin:2mm 0;page-break-inside:avoid}
+table{border-collapse:collapse;width:100%;font-size:9.4pt;margin:2mm 0} td,th{border:1px solid var(--line);padding:1.2mm 2mm;text-align:left;vertical-align:top} th{background:var(--box)}
+img.ex{max-height:62mm;max-width:100%;border:1px solid var(--line);border-radius:4px;display:block;margin:2mm auto}
+.toc td:first-child{width:12mm;font-weight:800;color:var(--acc)}
+.card{page-break-inside:avoid}
+</style></head><body>
+
+<section class="cover"><h1>Re-Ask Prompt Book</h1>
+<p>คู่มือ prompt เจนภาพทั้งเกม — ตัวละคร · ภาพจากที่อื่น→สไตล์เรา · ชิ้นส่วน rig · ชุด/คลาส · หมวก · อาวุธ · เอฟเฟคอาวุธ · ไอเทม · มอนสเตอร์ · VFX · แมพ</p>
+<p style="font-size:10pt;margin-top:12mm">สตูดิโอ: <b>สอน AI</b> · เกม: <b>Re-Ask</b> · STYLE LOCK v2 (ล็อก 2026-10-16)<br>อธิบายภาษาไทย · prompt ภาษาอังกฤษ (คัดลอกทั้งกล่อง)</p></section>
+
+<section class="ch"><h2>สารบัญ</h2>
+<table class="toc">
+<tr><td>0</td><td>วิธีใช้ + STYLE LOCK v2 + ภาพอ้างอิงที่ต้องแนบ</td></tr>
+<tr><td>1</td><td>สร้างตัวละครใหม่ (S1 เทียบสไตล์ → S2 ทดสอบในฉาก → S3 ครอบครัว)</td></tr>
+<tr><td>2</td><td>⭐ ใช้ภาพที่ชอบจากที่อื่น → แปลงเป็นสไตล์เรา → แยกชิ้น (R1–R3)</td></tr>
+<tr><td>3</td><td>ชีทชิ้นส่วน C2 v2 + ทริคขาหน้า + กับดักที่เคยเจอ</td></tr>
+<tr><td>4</td><td>ชุด / คลาส บนแม่แบบ hero2</td></tr>
+<tr><td>5</td><td>หมวก / ทรงผม</td></tr>
+<tr><td>6</td><td>อาวุธ</td></tr>
+<tr><td>7</td><td>เอฟเฟคอาวุธ (ชั้นเรือง · ธาตุ · รอยฟัน)</td></tr>
+<tr><td>8</td><td>ไอเทม / อุปกรณ์ (ไอคอน)</td></tr>
+<tr><td>9</td><td>มอนสเตอร์ (ตระกูล · ร่าง rig หรือ sprite · บอส)</td></tr>
+<tr><td>10</td><td>VFX สกิล</td></tr>
+<tr><td>11</td><td>แมพ (ล็อกสไตล์เมือง · ภาพรวม · ชุดของ · พื้น)</td></tr>
+<tr><td>A</td><td>ภาคผนวก: ชื่อไฟล์ + สิ่งที่ผมทำต่อหลังได้ภาพ</td></tr>
+</table></section>
+
+<section class="ch"><h2>0 · วิธีใช้</h2>
+<p><b>ขั้นตอนทุกงาน:</b> คัดลอก prompt → แทน <code>[STYLE LOCK]</code> ด้วยบล็อกด้านล่าง → แนบภาพอ้างอิงตามที่บอก → เจน 2–4 ภาพ เลือกที่ผ่านเช็คลิสต์ → วางไฟล์ไว้ที่โฟลเดอร์ <b>สอน AI</b> แล้วบอกว่าเป็นอะไร</p>
+<p><b>กฎทอง:</b> ภาพอ้างอิงสำคัญกว่าตัวหนังสือ · ห้ามแก้บล็อกล็อกสไตล์ทีละ prompt (แก้ที่เดียวใช้ทุกงาน) · ภาพไม่ผ่าน = เจนใหม่ ไม่ต้องแก้มือ</p>
+<h3>ภาพอ้างอิงหลัก (แนบเสมอ)</h3>
+<table><tr><th>ไฟล์</th><th>ใช้กับ</th></tr>
+<tr><td>assets/style/char_anchor.png</td><td>ทุกงานตัวละคร ชุด มอน อาวุธ ไอเทม</td></tr>
+<tr><td>assets/style/town_anchor.png / town_overview.png</td><td>งานแมพ + ตอนเช็คว่าตัวละครเข้ากับโลก</td></tr>
+<tr><td>assets/characters/hero2/master_cut.png</td><td>ชุดใหม่ / ชิ้นส่วน (ล็อกสัดส่วน)</td></tr></table>
+<img class="ex" src="../assets/style/char_anchor.png">
+<h3>STYLE LOCK v2</h3>
+<pre>STYLE LOCK v2:
+- Art: 2D chibi HD game art, anime-style face, same style as the attached reference character.
+- Proportions: about 2.7 heads tall, big head, large expressive eyes with one white highlight, small nose and mouth.
+- Outline: dark navy #1b1830, even 3px on the outer silhouette, thinner 1.5px on inner lines.
+- Shading: flat cel shading, 1 base + 2 shadow tones + 1 hard highlight, no soft gradients, no texture noise.
+- Light: single light from TOP-LEFT, rim highlight on the top/left edges.
+- View: 3/4 view facing right, full body, feet flat on an invisible ground line.
+- Palette: slightly desaturated medieval colors (navy, leather brown, steel, warm gold trims);
+  only ONE glowing accent per character (e.g. cyan rune or blade edge).
+- Detail level: readable at 120px tall; medium detail on clothes, no tiny patterns.
+- Background: flat pure magenta #FF00FF, no ground shadow, no text, no magenta on the character.</pre>
+</section>
+
+<section class="ch"><h2>1 · สร้างตัวละครใหม่</h2>
+<p>ใช้เมื่อยังไม่มีหน้าตาในใจ · ลำดับ S1 → S2 → S3 → ล็อก → ไปบท 3 (ชิ้นส่วน)</p>
+<div class="card"><h3>S1 — ตัวเดียว 6 สไตล์ (ชีท 3x2)</h3>
+<p class="meta"><b>แนบ:</b> town_anchor.png · <b>ได้:</b> เลือกสไตล์ 1 แบบ (หรือผสม เช่น เส้นแบบ 1 + สีแบบ 2)</p>
+<pre>Character style exploration sheet for a 2D fantasy MMORPG, 3x2 grid, the SAME young adventurer
+(short messy brown hair, blue tunic, leather belt and boots, short sword) drawn in 6 different chibi art styles,
+full body, 3/4 view facing right, standing idle pose, each on a flat pure magenta (#FF00FF) background:
+1 bright heroic chibi, 2.5 heads tall, thick dark navy outline, flat 2-tone cel shading;
+2 soft cute chibi, 2 heads tall, rounded shapes, pastel colors, warm brown outline;
+3 sharp cool chibi, 3 heads tall, angular shapes, darker palette with one glowing accent;
+4 painterly chibi, 2.5 heads tall, thin outline, soft painted shading like a storybook;
+5 bold comic chibi, 2.5 heads tall, very thick outline, flat colors, strong silhouette;
+6 premium fantasy chibi, 3 heads tall, ornate gold trims, glossy highlights, rich jewel colors.
+Same character design, pose and size in all 6, so only the art style differs. Number each style small under it.
+Light from top-left in all. Must fit the cozy medieval town in the reference image.</pre></div>
+<div class="card"><h3>S2 — ทดสอบในฉาก</h3>
+<pre>The chosen character from the reference (style #N) standing in the town plaza from the second reference,
+next to the fountain and a shop door, same 3/4 top-down camera. The door must be as tall as the character.
+Check: outline weight, shading and colors of the character match the buildings.</pre></div>
+<div class="card"><h3>S3 — ครอบครัว ฮีโร่ + NPC + มอน (ชีท 4x2)</h3>
+<pre>Character lineup in the exact art style of the reference character, 4x2 grid, each full body on flat pure magenta (#FF00FF),
+same 3/4 view facing right, same outline, shading and light from top-left, sizes relative to each other:
+1 the hero (reference), 2 friendly shopkeeper NPC with apron, 3 old guild master NPC with staff and robe,
+4 town guard NPC with spear and helmet, 5 small round slime monster (knee height), 6 forest wolf monster (waist height),
+7 mushroom creature monster (knee height), 8 armored goblin miniboss (slightly taller than the hero).
+Monsters use the same outline and shading rules but simpler shapes and one clear color theme each.</pre>
+<ul class="chk"><li>8 ตัววางรวมกันดูเป็นเกมเดียว · มอนอ่านออกจากเงาดำล้วน · ฮีโร่เด่นสุด</li></ul></div>
+</section>
+
+<section class="ch"><h2>2 · ⭐ ภาพที่ชอบจากที่อื่น → สไตล์เรา → แยกชิ้น</h2>
+<p>เจอตัวละครที่ชอบจากเกม/อาร์ตที่อื่น → เอามาแค่ <b>ไอเดีย</b> (สีชุด รูปทรง ทรงผม อาวุธ) แล้ววาดใหม่ด้วยสไตล์เรา</p>
+<div class="note">⚠ ภาพที่อื่นใช้เป็นแรงบันดาลใจได้ แต่เกมที่จะเผยแพร่/ขาย ห้ามให้เหมือนต้นฉบับจนจำได้ — prompt R1 สั่งเปลี่ยนรายละเอียดอย่างน้อย 3 จุดไว้ให้แล้ว ถ้ายังเหมือนเกิน เพิ่ม "change the hairstyle and the main color"</div>
+<div class="card"><h3>R1 — แปลงเป็นสไตล์เรา</h3>
+<p class="meta"><b>แนบ 2 ภาพ:</b> (1) ภาพที่ชอบ (2) char_anchor.png · <b>เจน:</b> 3–4 ภาพ เลือก 1</p>
+<pre>Redesign a NEW original character for my 2D MMORPG, inspired by image 1 but drawn exactly in the art style of image 2.
+From image 1 take only the general idea: [outfit type and colors / silhouette / weapon type / mood].
+Change at least 3 details so it is clearly a different character (face, hairstyle, outfit pattern, emblem, accessories).
+Do NOT copy the face, logos, emblems or exact costume pattern of image 1.
+Use image 2 for: proportions, face and eyes, outline, shading, light direction, camera angle and detail level.
+Full body, 3/4 view facing right, standing idle, arms slightly away from the body, legs slightly apart,
+weapon held low in the front hand. [STYLE LOCK]</pre></div>
+<div class="card"><h3>R2 — เช็คคู่กับ hero2</h3>
+<p class="meta"><b>แนบ:</b> ภาพจาก R1 + hero2 master_cut.png</p>
+<pre>Place the two reference characters side by side on a flat pure magenta background, same scale,
+same ground line, both 3/4 view facing right. Do not change either design.
+The new character must have the same head size, outline weight and shading as the other one.</pre>
+<ul class="chk"><li>หัวขนาดเท่ากัน · เส้นหนาเท่ากัน · เงาโทนเดียวกัน — ไม่ผ่าน → เจน R1 ใหม่</li></ul></div>
+<div class="card"><h3>R3 — แยกชิ้น</h3>
+<p>แนบภาพจาก R1 แล้วใช้ prompt <b>C2 v2</b> ในบท 3 ได้เลย (ชีทเดียว 6 ชิ้น)</p></div>
+</section>
+
+<section class="ch"><h2>3 · ชีทชิ้นส่วน C2 v2</h2>
+<p class="meta"><b>แนบ:</b> master ของตัวนั้น + char_anchor.png · <b>ผลลัพธ์ที่ผมใช้:</b> 6 ชิ้น → ตัดศอก 45% / เข่า 47% อัตโนมัติ</p>
+<pre>Character parts sheet for 2D skeletal animation, based on the reference character, flat pure magenta background (#FF00FF),
+exactly 6 separate pieces in 2 rows with wide gaps, same scale for all pieces as in the reference (do NOT enlarge any piece):
+row 1: 1 head with all hair, no neck; 2 torso: neck stub on top, collar, cape/scarf, belt and pouch, and the top of the
+shorts/hips at the bottom, shoulders rounded, NO arms, NO legs.
+row 2: 3 front arm as ONE piece (rounded sleeve cap at the shoulder -> forearm -> gloved fist), 4 back arm (same as 3),
+5 front leg as ONE piece (rounded pants top -> knee -> boot), 6 back leg (same as 5).
+Every limb hangs straight down, joint end on top drawn as a smooth rounded capsule so it hides under the torso.
+Shoulder armor or pads belong to the ARM piece only (not drawn on the torso). No mannequin pegs, no sockets, no gray stubs.
+Arms and legs as wide as in the reference. Simple shapes, thick outline, readable at small size. [STYLE LOCK]</pre>
+<img class="ex" src="../assets/characters/hero2/parts_sheet_v2.png" style="max-height:70mm">
+<h3>ทริคขาหน้า 4 แบบ (คลิป c4)</h3>
+<pre>4 versions of the same FRONT LEG piece of the reference character in one row on flat pure magenta (#FF00FF),
+identical thigh, knee and shin size and position in all 4; ONLY the boot tip direction changes:
+1 toe turned slightly toward the viewer, 2 toe turned halfway, 3 toe pointing straight at the viewer,
+4 toe pointing outward to the left. Same scale, outline and colors as the reference. [STYLE LOCK]</pre>
+<p>ยืน = แบบ 3 (มั่นใจสุด) · เดิน/วิ่ง = บูทหันข้าง (ไปทางที่เดิน) → เกมสลับให้เอง</p>
+<h3>กับดักที่เคยเจอ</h3>
+<table><tr><th>อาการ</th><th>แก้ใน prompt</th></tr>
+<tr><td>หมุดเทาบนหัวชิ้น (หุ่นโชว์)</td><td>no mannequin pegs, no gray stubs</td></tr>
+<tr><td>เกราะไหล่ซ้ำบนลำตัวและแขน → ทะลุตอนยกแขน</td><td>shoulder pads belong to the ARM piece only</td></tr>
+<tr><td>ชิ้นขนาดไม่เท่ากัน (แข้งใหญ่เท่าหัว)</td><td>same scale for all pieces, do NOT enlarge any piece</td></tr>
+<tr><td>แขนขาผอมกว่าภาพเต็ม</td><td>arms and legs as wide as in the reference</td></tr></table>
+</section>
+
+<section class="ch"><h2>4 · ชุด / คลาส (แม่แบบ hero2)</h2>
+<p>ชุดใหม่ = ชีท C2 v2 แผ่นเดียว · ท่าทุกท่าใช้ร่วมกัน · <b>แนบ hero2 master_cut.png + parts_sheet_v2.png</b> เพื่อให้ข้อต่อตรงเป๊ะ</p>
+<pre>Character parts sheet in EXACTLY the same layout, piece sizes and joint positions as the reference parts sheet,
+same body and head as the reference character, only the OUTFIT changes to: [OUTFIT].
+6 pieces: head (new hair or helmet allowed), torso, front arm, back arm, front leg, back leg — each limb ONE piece,
+rounded capsule joint ends, no pegs, pads on the arm pieces only. Flat pure magenta background (#FF00FF). [STYLE LOCK]</pre>
+<table><tr><th>คลาส</th><th>[OUTFIT]</th><th>อาวุธ / สี FX</th></tr>
+<tr><td>นักดาบ (hero2)</td><td>—</td><td>ดาบมือเดียว · ฟ้า</td></tr>
+<tr><td>อัศวิน</td><td>heavy silver plate armor with gold trims, short red cape, tall armored boots</td><td>ดาบใหญ่+โล่ · ทอง</td></tr>
+<tr><td>นักเวท</td><td>long deep-purple robe with star embroidery, wide sleeves, rope belt, soft leather shoes</td><td>คทา · ม่วง</td></tr>
+<tr><td>นักธนู</td><td>green leather hunter outfit, short hooded cloak, arm guards, quiver strap across the chest</td><td>ธนู · เขียว</td></tr>
+<tr><td>โจร</td><td>dark fitted leather, face scarf, many small belts and pouches, soft boots</td><td>มีดสั้นคู่ · แดง</td></tr>
+<tr><td>นักบวช</td><td>white and gold priest robe, short mantle, holy symbol on the chest</td><td>คทาสั้น · ขาวทอง</td></tr></table>
+<div class="note">กระโปรง/เสื้อคลุมยาวช่วยซ่อนรอยต่อสะโพกตอนวิ่ง (คลิป c4) — ชุดแขนขาโล่งต้องระวังรอยต่อมากกว่า</div>
+</section>
+
+<section class="ch"><h2>5 · หมวก / ทรงผม</h2>
+<div class="card"><h3>H1 — หมวก 2 สถานะ (เปิดหน้า / ปิดหน้า)</h3>
+<p class="meta"><b>แนบ:</b> ชิ้นหัวของ hero2 · หมวกติดกระดูกหัว ใส่ได้ทุกทรงผม</p>
+<pre>Two versions of the same [HELMET] for the reference character's head, side by side on flat pure magenta (#FF00FF):
+1 open (face visible, worn on the reference head size), 2 closed visor. Same size and position in both.
+Draw only the helmet, no head, no hair. 3/4 view facing right. [STYLE LOCK]</pre></div>
+<div class="card"><h3>H2 — ทรงผม 6 แบบ (ชีท 3x2)</h3>
+<pre>6 hairstyles for the same reference head (same face, same size and position), 3x2 grid on flat pure magenta (#FF00FF):
+1 short spiky, 2 long ponytail, 3 bob cut, 4 messy medium, 5 shaved sides with top knot, 6 long wavy.
+Each drawn as a full head piece, no neck. Keep the face identical. [STYLE LOCK]</pre></div>
+<div class="card"><h3>H3 — หมวกแฟชั่น 8 ใบ (ชีท 4x2)</h3>
+<pre>8 cosmetic hats sized for the reference head, 4x2 grid on flat pure magenta (#FF00FF), only the hats:
+straw hat, wizard hat, knitted beanie, feathered cap, flower crown, cat-ear hood, pirate tricorn, fruit-shaped cap.
+Same 3/4 angle facing right, same scale, simple readable shapes. [STYLE LOCK]</pre></div>
+</section>
+
+<section class="ch"><h2>6 · อาวุธ</h2>
+<p><b>กติกาที่ rig ต้องการ:</b> ใบ/หัวอาวุธชี้ขึ้นบน ด้ามอยู่ล่าง ตรงแนวตั้ง · มือจับที่ ~82% จากบน · อาวุธแต่ละชิ้นแยกช่อง</p>
+<div class="card"><h3>W1 — อาวุธ 6 ชนิด (ชีท 3x2)</h3>
+<pre>6 weapons for the reference chibi character, 3x2 grid on flat pure magenta (#FF00FF), each standing perfectly vertical,
+blade or head pointing UP, handle at the bottom, sized relative to the character (sword about 0.8x character height):
+1 one-handed sword, 2 two-handed greatsword, 3 magic staff with crystal top, 4 wooden longbow (string on the right),
+5 pair of daggers side by side, 6 round shield (front view slightly angled).
+Glowing parts (runes, crystals, blade edge) drawn in one accent color only. [STYLE LOCK]</pre></div>
+<div class="card"><h3>W2 — อาวุธชิ้นเดียว 6 ขั้นอัพเกรด</h3>
+<pre>The same [WEAPON] in 6 upgrade tiers, one row on flat pure magenta (#FF00FF), identical size, angle and handle position:
+1 rusty iron, 2 clean steel, 3 steel with gold trim, 4 silver with blue runes, 5 ornate with glowing crystal,
+6 legendary with flowing energy edge. Each tier keeps the same silhouette, only materials and decorations grow. [STYLE LOCK]</pre></div>
+<div class="note">ดาบเรืองแสงของ hero2 (แบบภาพต้นฉบับ): ใช้ W1 ช่อง 1 + "a slim blue steel sword with a glowing cyan blade edge and a small gold guard"</div>
+</section>
+
+<section class="ch"><h2>7 · เอฟเฟคอาวุธ</h2>
+<p>หลัก 6: <b>แยกชั้นแสงออกจากภาพ</b> → เกมซ้อนแสงแบบ additive + bloom + เต้นตามจังหวะ / ตอนฟันแรงขึ้น</p>
+<div class="card"><h3>E1 — ชั้นเรืองแยก (glow layer)</h3>
+<p class="meta"><b>แนบ:</b> ภาพอาวุธที่ได้ · ถ้าไม่เจน ผมแยกให้อัตโนมัติด้วย make_glow.py ได้ (สีสด 1 โทน)</p>
+<pre>Glow layer only for the reference weapon: same size and position, pure black background,
+draw ONLY the parts that emit light (runes, crystal, blade edge) in bright [cyan], everything else black.
+No outline, no shading, no other colors.</pre></div>
+<div class="card"><h3>E2 — อาวุธธาตุ 4 แบบ</h3>
+<pre>The same reference weapon in 4 elemental versions, one row on flat pure magenta (#FF00FF), identical size and angle:
+1 fire (cracked lava lines, orange glow), 2 ice (frosted blade, pale cyan crystals), 3 lightning (yellow-white arcs in grooves),
+4 shadow (black smoky blade, violet rim). Effects stay attached to the weapon, short and readable, no big particles. [STYLE LOCK]</pre></div>
+<div class="card"><h3>E3 — รอยฟัน (slash) ชีทเฟรม 6 เฟรม</h3>
+<pre>2D game VFX sprite sheet, 3 columns x 2 rows, 6 frames, equal square cells, pure black background,
+same scale in every frame, slash centered in each cell. A [cyan] crescent sword slash:
+1 thin white line starts, 2 crescent sweeps with white-hot core, 3 full crescent, 4 brightest with sparks,
+5 fades and breaks at the edges, 6 thin afterglow wisps. White core fading to [cyan] then dark edge,
+anime brush stroke, flat color bands, tapered ends.</pre></div>
+<div class="card"><h3>E4 — ประกายโดน (hit spark) 6 ชิ้น</h3>
+<pre>6 small hit-impact sparks for a 2D action game, one row on pure black background, each separate:
+star burst, cross flash, ring shock, shard spray, round puff, comic "pow" shape (no text).
+White core with [cyan] edges, flat color bands, sharp shapes.</pre></div>
+</section>
+
+<section class="ch"><h2>8 · ไอเทม / อุปกรณ์</h2>
+<p><b>กติกาไอคอน:</b> ทุกช่องขนาดเท่ากัน · วัตถุอยู่กลางช่อง ~75% ของช่อง · มุม 3/4 เล็กน้อย · อ่านออกที่ 48px</p>
+<div class="card"><h3>I1 — ไอคอน 16 ชิ้น (ชีท 4x4)</h3>
+<pre>16 inventory item icons for a 2D fantasy MMORPG, 4x4 grid of equal square cells on flat pure magenta (#FF00FF),
+each item centered and filling about 75% of its cell, slight 3/4 angle, thick dark navy outline, flat cel shading,
+readable at 48 pixels:
+row 1: red health potion, blue mana potion, green antidote, golden elixir;
+row 2: bread, roasted meat, apple, cheese;
+row 3: iron ore, wood log, monster fang, slime jelly;
+row 4: treasure key, scroll, gold coin pile, gem. [STYLE LOCK]</pre></div>
+<div class="card"><h3>I2 — อุปกรณ์สวมใส่ 12 ชิ้น (ชีท 4x3)</h3>
+<pre>12 equipment icons, 4x3 grid of equal square cells on flat pure magenta (#FF00FF), centered, same style:
+leather cap, iron helmet, cloth robe, chain armor, leather gloves, gauntlets, boots, iron greaves,
+ring, necklace, earring, cape. [STYLE LOCK]</pre></div>
+<div class="card"><h3>I3 — กรอบความหายาก</h3>
+<pre>5 empty square item-slot frames in one row on flat pure magenta (#FF00FF), same size, ornate but thin:
+common (gray), uncommon (green), rare (blue), epic (purple), legendary (gold with small gems).
+Transparent middle area. [STYLE LOCK]</pre></div>
+</section>
+
+<section class="ch"><h2>9 · มอนสเตอร์</h2>
+<p><b>เลือกวิธีทำตามรูปร่าง:</b></p>
+<table><tr><th>รูปร่าง</th><th>วิธี</th><th>ตัวอย่าง</th></tr>
+<tr><td>คล้ายคน (2 ขา 2 แขน)</td><td>ชีทชิ้นส่วน C2 v2 → ใช้ rig + ท่าเดียวกับผู้เล่น</td><td>ก็อบลิน โครงกระดูก อัศวินดำ</td></tr>
+<tr><td>สัตว์ 4 ขา / ไม่มีขา</td><td>ชีทชิ้นส่วนแบบมอน (M3) หรือ sprite เฟรม (M4)</td><td>หมาป่า หมูป่า สไลม์ หนอน</td></tr>
+<tr><td>ก้อนเรียบง่าย</td><td>ภาพเดียว + โค้ดยืด-หด-เด้ง (squash & stretch)</td><td>สไลม์ ผีลอย เห็ด</td></tr></table>
+<p><b>กฎมอน:</b> ทุกแมพมีตระกูลเดียวกัน (โทนตรงข้ามสีสกิล หลัก 16) · 1 ตัว = 1 สีหลักชัด · อ่านออกจากเงาดำ · บอสใหญ่ 1.5–2x</p>
+<div class="card"><h3>M1 — ตระกูลมอนประจำแมพ (ชีท 4x2)</h3>
+<pre>Monster family for the [GRASSLAND] map of a 2D MMORPG, 4x2 grid, each full body on flat pure magenta (#FF00FF),
+3/4 view facing LEFT (toward the player), sizes relative to a 2.7-head chibi hero:
+1-2 tiny cute starter monster in 2 color variants (knee height), 3 small fast monster (knee height),
+4 medium monster (waist height), 5 medium tough monster with armor (waist height), 6 ranged/caster monster,
+7 elite version of #4 with spikes and glowing eyes, 8 map BOSS (1.8x hero height, crown or horns, strongest silhouette).
+Same family theme: [green hills, leaves, flowers]. Each monster one clear main color. Simple bold shapes. [STYLE LOCK]</pre></div>
+<div class="card"><h3>M2 — ตัวเดียว 4 สถานะ (ใช้ทำ sprite ง่ายๆ)</h3>
+<pre>The same reference monster in 4 states, one row on flat pure magenta (#FF00FF), identical size and ground line:
+1 idle, 2 attack wind-up (leaning back, mouth open), 3 hit (squashed, eyes closed, white flash look), 4 defeated (flattened, X eyes).
+3/4 view facing left. [STYLE LOCK]</pre></div>
+<div class="card"><h3>M3 — ชีทชิ้นส่วนมอน 4 ขา</h3>
+<pre>Parts sheet for 2D skeletal animation of the reference quadruped monster, flat pure magenta (#FF00FF), wide gaps,
+same scale as the reference: 1 head (with ears/horns), 2 body (no legs, no tail), 3 tail, 4 front leg near, 5 front leg far,
+6 back leg near, 7 back leg far. Each leg ONE piece hanging straight down, joint end on top as a rounded capsule.
+No pegs. 3/4 view facing left. [STYLE LOCK]</pre></div>
+<div class="card"><h3>M4 — sprite เฟรม (สไลม์/ผี) 8 เฟรม</h3>
+<pre>2D game sprite sheet, 4 columns x 2 rows, 8 frames, equal square cells, flat pure magenta (#FF00FF),
+the SAME [slime] in every frame, same size, bottom of the body on the same ground line in every cell.
+Frames 1-4: idle bounce loop (squash down, stretch up, back); frames 5-8: hop attack (crouch, leap, land splash, recover).
+3/4 view facing left. [STYLE LOCK]</pre></div>
+<div class="note">มอนหันซ้าย (หาผู้เล่น) · เกมกลับด้านให้เองเมื่อเดินไปขวา · ชื่อ+Lv+HP ลอยหัว เกมวาดเอง ไม่ต้องใส่ในภาพ</div>
+</section>
+
+<section class="ch"><h2>10 · VFX สกิล</h2>
+<p><b>กฎร่วม:</b> กริดตายตัว · จุดยึดเดียวกันทุกเฟรม · ขนาด/สีเดียวกัน · เล่าเรื่องทีละเฟรม (ง้าง → ปะทุ → ค้าง → สลาย) · พื้นดำ (ผมแยกแสงให้)</p>
+<div class="card"><h3>V-แม่แบบ — สกิลธาตุใดก็ได้ (8 เฟรม)</h3>
+<pre>2D game VFX sprite sheet, 4 columns x 2 rows, 8 frames, each frame in its own equal square cell,
+pure black background, same scale and palette in every frame, ground line at the bottom of every cell, centered.
+Animation of [ELEMENT SKILL, e.g. ice spikes erupting from the ground]:
+1 faint sign on the ground, 2 sign grows brighter, 3 first shapes break through, 4 halfway,
+5 full size with brightest rim and flying bits, 6 hold, 7 breaking apart into dust, 8 only fading marks remain.
+Main body [dark color], glowing rim [accent color], anime hand-drawn style, flat color bands.</pre></div>
+<div class="card"><h3>V1 — คอนเซ็ปต์ 3 จังหวะ (ให้ผมทำเป็น shader)</h3>
+<pre>VFX concept sheet for a 2D game, three panels left to right on dark background:
+[poison bubble shield] around a small chibi character - 1 forming, 2 stable idle state, 3 bursting apart.
+Anime-style hand-drawn effect, flat color bands, bold shapes, glow only on the brightest edges. 3/4 camera.</pre></div>
+<div class="card"><h3>V2 — พาเลต 5 สี</h3>
+<pre>A single horizontal color palette strip of exactly 5 flat color swatches for a [poison] magic effect,
+ordered darkest to lightest, high saturation in the middle swatches, no gradients, no text.</pre></div>
+<p>ชุด Dark ที่มีอยู่แล้ว (หนามทมิฬ · อสูรเงา · สแลช X · ระเบิดความว่าง · พายุ) อยู่ใน PROMPT_PACK.md §4.5</p>
+</section>
+
+<section class="ch"><h2>11 · แมพ</h2>
+<p>ลำดับ: M0 ภาพตั้งต้น → M1 ภาพรวมทั้งแมพ → ชุดของ TK-1~5 → พื้น · แนบ M0+M1 ทุกชีท · ผมส่งเข้า Map Lab (ใบสั่ง+กฎ+seed)</p>
+<h3>TOWN STYLE LOCK</h3>
+<pre>TOWN STYLE LOCK:
+- Art: 2D hand-painted chibi HD game art, same style as the attached reference images.
+- Outline: dark navy #1b1830, even 3px weight on outer silhouette, 1.5px on inner lines.
+- Shading: flat cel shading, exactly 1 base + 2 shadow tones + 1 highlight, no gradients, no texture noise.
+- Light: single sun from TOP-LEFT, highlights on top/left faces, shadows on bottom/right faces.
+- Camera: 3/4 top-down, looking down 35 degrees, NO perspective, front faces visible.
+- Scale: a door is exactly as tall as the 2.7-head chibi hero; a 2-floor building = 2.5 doors tall.
+- Palette: roofs terracotta #b5543c / slate teal #3f6b73 / moss green #5f7d3a, walls cream #efe1c4 with timber #6b4a32,
+  stone #a39a8c, wood #8a5a36, iron #4a4f5c, foliage #6f9a52 / #4e7a3c, water #4fb3c9, gold #e0b04a. Slightly desaturated, warm.
+- Windows UNLIT (dark blue glass #2c3a5c), no fire or glow unless asked.
+- Output: every object separate with wide gaps, flat pure magenta background #FF00FF, no ground shadow, no text.</pre>
+<div class="card"><h3>แผนที่ใหม่ (เปลี่ยนคำในวงเล็บ)</h3>
+<pre>Full overview of the whole [MAP NAME: e.g. Windy Grassland] map for a 2D MMORPG, wide 3:2 image, entire map visible,
+same 3/4 top-down 35-degree camera, zoomed out, no perspective. Layout: [main paths, landmarks, water, forest edges,
+exits to other maps at the edges with a soft blue glow]. Monster areas as open clearings.
+A small chibi hero in the middle for scale. Use TOWN STYLE LOCK rules but draw a full scene (ignore the magenta rule).</pre></div>
+<div class="card"><h3>ชุดของประจำแมพ (ชีท 4x2)</h3>
+<pre>8 environment props for the [MAP NAME] map in a 4x2 grid: [list 8 props: 2 tree types, bush, rock, fence, sign, camp, ruin].
+[TOWN STYLE LOCK]</pre></div>
+<div class="card"><h3>พื้น 9 แบบ (ชีท 3x3)</h3>
+<pre>Ground texture sheet for a 2D fantasy MMORPG: a 3x3 grid of 9 separate SQUARE ground swatches, same size,
+separated by thick pure magenta (#FF00FF) gutters. Each swatch is an independent SEAMLESS TILEABLE texture filling its square,
+seen from 3/4 top-down 35 degrees, no objects, no shadows, even detail: [9 ground types].
+Stones and planks large and readable (about 10-12 stones across a swatch), thin soft outlines, warm colors matching the grass.
+[TOWN STYLE LOCK] (magenta only in the gutters)</pre></div>
+<img class="ex" src="../knowledge/plaza_v2.jpg">
+</section>
+
+<section class="ch"><h2>A · ภาคผนวก</h2>
+<h3>ส่งภาพให้ผมยังไง</h3>
+<p>วางไฟล์ที่ได้ไว้ที่โฟลเดอร์ <b>สอน AI</b> (ชื่ออะไรก็ได้) → บอกว่า "เพิ่มให้แล้ว: ชีท C2 v2 ของนักเวท" → ผมย้าย ตั้งชื่อ ตัด และทดสอบ</p>
+<h3>สิ่งที่ผมทำต่อหลังได้ภาพ</h3>
+<table><tr><th>ภาพ</th><th>ผมทำ</th><th>ไปอยู่ที่</th></tr>
+<tr><td>ชีทชิ้นส่วน C2 v2</td><td>ตัดชมพู · ลบหมุด · split_limbs (ศอก 45% เข่า 47%) · สลับบูท · ตั้งขนาดใน rig</td><td>assets/characters/&lt;ชื่อ&gt;/parts</td></tr>
+<tr><td>อาวุธ / หมวก</td><td>ตัด · แยกชั้นเรือง (make_glow) · ตั้งจุดจับ</td><td>assets/weapons, assets/helmets</td></tr>
+<tr><td>ไอคอนไอเทม</td><td>ตัดตามกริด · ตั้งชื่อตาม items.json</td><td>assets/items → Re-Ask/data/db</td></tr>
+<tr><td>มอน</td><td>rig (คล้ายคน/4 ขา) หรือ sprite เฟรม · ใส่ mobs.json + spawn ในแมพ</td><td>assets/monsters</td></tr>
+<tr><td>VFX ชีทเฟรม</td><td>cut_grid · จัดเฟรมให้ตรง · ชั้นเรือง · ใส่สกิล</td><td>assets/vfx</td></tr>
+<tr><td>ชุดของแมพ / พื้น</td><td>build_town_kit · normal map · ไฟกลางคืน · Map Lab · ส่งออกเข้าเกม</td><td>assets/maps/&lt;แมพ&gt;</td></tr></table>
+<h3>เช็คลิสต์รวมก่อนส่ง</h3>
+<ul class="chk"><li>พื้นหลังชมพูล้วน (หรือดำสำหรับ VFX) ไม่มีเงาบนพื้น ไม่มีตัวหนังสือ</li>
+<li>แสงซ้ายบน · มุม 3/4 · เส้นขอบหนาเท่ากันทุกชิ้น</li><li>ขนาดสัมพันธ์ถูก (ประตู = ความสูงตัวละคร)</li>
+<li>ชิ้นแยกกันชัด มีช่องว่าง ไม่ทับกัน</li></ul>
+</section>
+</body></html>

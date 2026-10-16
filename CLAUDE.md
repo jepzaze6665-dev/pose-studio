@@ -10,6 +10,7 @@
 - `knowledge/*.png|jpg` — ภาพเทียบก่อน/หลังของงานที่ผ่านมา
 - `PROMPT_PACK.md` — prompt ทั้งหมด + **STYLE LOCK v2** (§2) · TOWN STYLE LOCK (§4.6) · หาสไตล์ตัวละคร (§4.7) · ชีทชิ้นส่วน **C2 v2**
 - `.claude/skills/game-art-pipeline/SKILL.md` — ขั้นตอนทำงาน + กับดักที่เคยเจอ (โหลดอัตโนมัติเมื่อทำงานภาพ)
+- `docs/prompt_book.html` → `docs/Re-Ask_Prompt_Book.pdf` — คู่มือ prompt ฉบับรวม (ตัวละคร, R1–R3 ภาพที่ชอบ→สไตล์เรา, ชุด/คลาส, หมวก, อาวุธ, เอฟเฟคอาวุธ, ไอเทม, มอน, VFX, แมพ) · แก้ HTML แล้ว print ด้วย Chrome headless (ใส่ --user-data-dir + path เต็ม)
 - `README.md` — โครงโฟลเดอร์
 
 ## สถานะปัจจุบัน
