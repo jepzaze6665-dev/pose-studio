@@ -29,6 +29,19 @@ for name, src in [('dark_knight', 'assets/outfits/dark_knight'), ('knight', 'ass
         if os.path.exists(os.path.join(studio, src, 'parts', p + '.png')):
             cp(f'{src}/parts/{p}.png', f'data/characters/{name}/{p}.png')
     cp(f'{src}/variants/leg_lower_3.png', f'data/characters/{name}/leg_lower_3.png')
+# hero2 (ชีท C2 v2 แบ่งแขน/ขาด้วย tools/split_limbs.py — ขนาดชิ้นอยู่ใน game/main.js เป็น spec ของชุด)
+for p in ['head', 'torso', 'armF_u', 'armF_l', 'armB_u', 'armB_l', 'legF_u', 'legF_l', 'legB_u', 'legB_l', 'legF_l_front_toe']:   # ชีท C2 v2
+    cp(f'assets/characters/hero2/parts/{p}.png', f'data/characters/hero2/{p}.png')
+# แมพเมือง: พื้นอบ + layout (จากปุ่ม "ส่งออกเข้าเกม" ใน Map Lab) + ภาพของที่ใช้จริง
+cp('assets/maps/town/export/town_ground.jpg', 'data/maps/town/ground.jpg')
+cp('assets/maps/town/export/town_layout.json', 'data/maps/town/layout.json')
+lay = os.path.join(studio, 'assets/maps/town/export/town_layout.json')
+if os.path.exists(lay):
+    kinds = sorted({o['k'] for o in json.load(open(lay, encoding='utf-8'))['objects']})
+    for k in kinds + ['waystone_crystal']:
+        for suf in ['', '_night', '_glow']:
+            if os.path.exists(os.path.join(studio, f'assets/maps/town/kit/{k}{suf}.png')):
+                cp(f'assets/maps/town/kit/{k}{suf}.png', f'data/maps/town/kit/{k}{suf}.png')
 # gear
 cp('assets/weapons/greatsword/greatsword.png', 'data/gear/greatsword.png')
 cp('assets/weapons/greatsword/greatsword_glow.png', 'data/gear/greatsword_glow.png')

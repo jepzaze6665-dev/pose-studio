@@ -106,6 +106,21 @@ No magenta anywhere on the character. [STYLE LOCK]
 | leg_lower | เข่า | กลางบน (10%) |
 | weapon | ด้ามที่มือจับ | กลาง (82% จากบน), ใบดาบชี้ขึ้น |
 
+### C2 v2 — ชีทชิ้นส่วนแบบ Night Camp (แนะนำ · แขน/ขาชิ้นเดียว)
+แนบ master + `char_anchor.png`
+```
+Character parts sheet for 2D skeletal animation, based on the reference character, flat pure magenta background (#FF00FF),
+exactly 6 separate pieces in 2 rows with wide gaps, same scale for all pieces as in the reference (do NOT enlarge any piece):
+row 1: 1 head with all hair, no neck; 2 torso: neck stub on top, collar, cape/scarf, belt and pouch, and the top of the
+shorts/hips at the bottom, shoulders rounded, NO arms, NO legs.
+row 2: 3 front arm as ONE piece (rounded sleeve cap at the shoulder -> forearm -> gloved fist), 4 back arm (same as 3),
+5 front leg as ONE piece (rounded pants top -> knee -> boot), 6 back leg (same as 5).
+Every limb hangs straight down, joint end on top drawn as a smooth rounded capsule so it hides under the torso.
+Shoulder armor or pads belong to the ARM piece only (not drawn on the torso). No mannequin pegs, no sockets, no gray stubs.
+Arms and legs as wide as in the reference. Simple shapes, thick outline, readable at small size. [STYLE LOCK]
+```
+> ระบบเดิมตัดแขน/ขาเป็น 2 ท่อน → ใช้ชีทนี้ได้เลย: ผมตัดที่ 45% (ศอก) / 47% (เข่า) ให้อัตโนมัติ (หรือทำงอแบบ mesh ทีหลัง)
+
 ### C3 — ขาหน้า 4 แบบ (ทริคเปลี่ยนบุคลิก)
 แนบ `leg_lower.png`
 ```
@@ -153,6 +168,44 @@ Crack color: deep red edges -> orange -> pale yellow core.
 > ตั้งชื่อ `<ชิ้น>_glow.png` · ผมจะซ้อนแบบ additive + bloom แล้วทำให้เต้นเป็นจังหวะหัวใจ
 
 ---
+
+## 3.5 Prompt มอนสเตอร์ (สูตรสไลม์ Night Camp → ดู knowledge/MONSTER_RIG.md)
+
+### MR1 — กระต่ายมอน: ตัวเต็ม (master · เจน 3–4 ภาพ เลือก 1)
+```
+Game enemy monster: a small horned forest rabbit, chibi creature, round fluffy body,
+very long floppy ears, one short curved horn on the forehead, big round eyes, tiny fluffy tail,
+big hind feet, short front paws. Cute but slightly mischievous expression.
+Fur: cream white with soft brown patches; horn: pale bone color with ONE glowing cyan tip (only glowing accent).
+Pose: standing on all fours, side 3/4 view facing right, ears relaxed hanging back, whole body visible.
+Size reference: about half the height of the hero character.
+[แปะ STYLE LOCK v2 + VARIANT F]
+```
+
+### MR2 — กระต่ายมอน: ชีทชิ้นส่วน (สำหรับริก · ชีท 4x3)
+```
+Character parts sheet of THE SAME rabbit monster as the attached reference image (same colors, same outline, same scale).
+Grid 4 columns x 3 rows, each part centered in its own cell, wide flat magenta #FF00FF gutters between cells,
+no part touching another, every part complete (nothing cut off), all parts at the SAME scale as the reference.
+Row 1: (1) body WITHOUT head, ears, legs and tail — fill the areas where they attach with fur, smooth rounded joints
+       (2) head WITHOUT ears and WITHOUT eyes — fill the eye area with plain fur/skin, keep nose and mouth
+       (3) front ear, long and floppy, straight, attach end rounded
+       (4) back ear, same as front ear but slightly darker (in shadow)
+Row 2: (5) eyes OPEN (pair of eyes only, no head)  (6) eyes CLOSED/hurt (curved lines)
+       (7) eyes ANGRY (sharp, glaring)  (8) horn alone with its glowing tip
+Row 3: (9) front paw (front leg), straight, rounded top  (10) back front paw, slightly darker
+       (11) big hind leg with foot, straight, rounded top  (12) fluffy round tail
+Side view facing right for every part. No shadows on the ground, no text, no numbers.
+[แปะ STYLE LOCK v2 + VARIANT F]
+```
+
+**ทำไมแยกแบบนี้** (สูตรเดียวกับสไลม์)
+- หู 2 ข้าง + หาง = ปลายโซ่ → ใส่ **spring bone** ให้หูดีดตามตอนกระโดด (เหมือนปลายหยดน้ำ/ใบบัว)
+- ตา 3 แบบ = สลับภาพตามท่า: ลืม (idle) · หลับ (hit/die) · โกรธ (attack)
+- ลำตัว/หัว "แบบไม่มีชิ้นบน" = เนื้อเติมใต้ชิ้น ขยับแล้วไม่เห็นรู
+- ท่า 5 ท่า: idle (หายใจ จมูกกระดิก หูแกว่ง) · hop (ย่อ → กระโดด หูสะบัด) · attack (ก้มหัวพุ่งเอาเขาขวิด) · hit · die (ล้มตะแคง จางหาย)
+
+**เช็คก่อนส่ง:** ครบ 12 ช่อง · ชิ้นไม่ติดกัน · หูยาวตรงไม่งอ · ลำตัวไม่มีหัว/ขาติดมา · สีตรงกับ MR1 · ตั้งชื่อไฟล์ `image-rabbit-master.png` / `image-rabbit-parts.png` วางที่ราก repo
 
 ## 4. Prompt VFX
 

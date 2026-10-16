@@ -9,7 +9,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Segoe UI",Tahoma,sans-serif}
 .wrap{display:flex;gap:16px;padding:16px;flex-wrap:wrap;justify-content:center}
-canvas#view{background:#0d0c16;border-radius:12px;max-width:100%;height:auto;border:1px solid var(--line)}
+canvas#view{background:#0d0c16;border-radius:12px;max-width:100%;height:auto;align-self:flex-start;aspect-ratio:760/520;border:1px solid var(--line)}
 .side{width:330px;max-width:100%;display:flex;flex-direction:column;gap:10px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
 h1{font-size:18px;margin:0 0 4px}.sub{color:var(--dim);font-size:13px}
@@ -91,6 +91,7 @@ let custom={...READY};
 
 // ---------- OUTFITS (หลักที่ 3: แม่แบบเดียว เปลี่ยนชุด) ----------
 const OUT={
+  'ฮีโร่ใหม่ (hero2)':{set:'hero2',body:'hero2',skin:'#f3d2b5',hair:'#7a4a22',shirt:'#2c3e66',scarf:'#2c3e66',pants:'#25304a',boot:'#5a4030',blade:'#cfe8ff',glow:null},
   'นักผจญภัย (พิกเซล)':{set:'adv',body:'adv',pixelArt:true,skin:'#f3d2b5',hair:'#7a4a22',shirt:'#2c4aa0',scarf:'#2c4aa0',pants:'#5a7a3a',boot:'#7a4a22',blade:'#e8eef8',glow:null},
   'อัศวินดำ (แขนง C)':{set:'dark',body:'knight',weapon:true,helmet:true,glowCol:'#b45cff',skin:'#f3d2b5',hair:'#7a4a22',shirt:'#3a3740',scarf:'#5a2a8a',pants:'#2a2830',boot:'#3a3740',blade:'#8d97b0',glow:null},
   'อัศวิน (PNG จริง)':{weapon:true,set:'knight',body:'knight',skin:'#f3d2b5',hair:'#7a4a22',shirt:'#9aa3b5',scarf:'#2c4aa0',pants:'#2a2830',boot:'#9aa3b5',blade:'#e8eef8',glow:null},
@@ -111,17 +112,21 @@ const SPEC={head:{h:54,px:.6,py:.93},torso:{h:81,px:.5,py:.63},arm_upper:{h:39,p
 const BODY={
   doodle:{head:[0,-46],armB_u:[-4,-40],armF_u:[4,-40],armB_l:[0,22],armF_l:[0,22],weapon:[0,20],legB_u:[-7,0],legF_u:[7,0],legB_l:[0,21],legF_l:[0,21],foot:44},
   adv:{head:[3,-41],armB_u:[-12,-33],armF_u:[12,-33],armB_l:[0,30],armF_l:[0,30],weapon:[0,28],legB_u:[-7,-3],legF_u:[7,-3],legB_l:[0,37],legF_l:[0,37],foot:69},
+  hero2:{head:[2,-44],armF_u:[-13,-35],armB_u:[11,-34],armF_l:[0,19.2],armB_l:[0,19.2],weapon:[0,25.7],legF_u:[-8,-4],legB_u:[9,-4],legF_l:[0,25.1],legB_l:[0,25.1],foot:57},
   knight:{head:[2,-47],armB_u:[-11,-34],armF_u:[11,-34],armB_l:[0,28],armF_l:[0,28],weapon:[0,27],legB_u:[-8,-2],legF_u:[8,-2],legB_l:[0,22],legF_l:[0,22],foot:48},
 };
 let body='doodle', curPose={}, pixelSet=false;
 const PIX=new Map(); // HD image -> pixelized image (native pixel parts)
 function applyBody(k){body=k;for(const n in BODY[k]) if(B[n]) B[n].off=BODY[k][n];}
 const SETS={}; // outfit -> {partName: Image}
-function loadSet(setName,base,names){SETS[setName]={};for(const n of names){const im=new Image();im.onload=()=>SETS[setName][n]=im;im.src=base+n+'.png';}}
+function loadSet(setName,base,names){SETS[setName]={};for(const n of names){const im=new Image();im.onload=()=>SETS[setName][n]=im;im.src=base+n+'.png?r=5';}} // เปลี่ยนเลข r เมื่อแก้ภาพชิ้นส่วน (กันแคช)
 loadSet('knight','../assets/characters/knight/parts/',['head_hair','head','torso','arm_upper','arm_lower','leg_upper','leg_lower','shoulder']);
+loadSet('hero2','../assets/characters/hero2/parts/',['head','torso','armF_u','armF_l','armB_u','armB_l','legF_u','legF_l','legB_u','legB_l']); // แขน/ขาหน้า-หลังคนละภาพ
 loadSet('adv','../assets/characters/adventurer/parts/',['head','torso','arm_upper','arm_lower','leg_upper','leg_lower']);
 loadSet('advVar','../assets/characters/adventurer/variants/',['leg_lower_1','leg_lower_2','leg_lower_3']);
 // พิกเซลจริง: 1 เม็ด = 1 หน่วย rig, จุดหมุนวัดจากชิ้น
+// ขนาด/จุดหมุนเฉพาะชุด (ชีทที่ AI เจนมาสเกลแต่ละชิ้นไม่เท่ากัน -> อิงสัดส่วนจาก master แทน)
+const SPEC_SET={hero2:{head:{h:57.9,px:0.55,py:0.9},torso:{h:62.9,px:0.5,py:0.78},arm_upper:{h:28.3,px:0.5,py:0.226},arm_lower:{h:35.2,px:0.5,py:0.109},leg_upper:{h:34.9,px:0.5,py:0.183},leg_lower:{h:40.5,px:0.5,py:0.115}}}; // ชีท C2 v2 (tools/split_limbs.py) สเกลเดียว
 const SPEC_PX={head:{px:.55,py:.95},torso:{px:.5,py:.84},arm_upper:{px:.5,py:.14},arm_lower:{px:.5,py:.12},leg_upper:{px:.5,py:.12},leg_lower:{px:.5,py:.13}};
 const DK='../assets/outfits/dark_knight/parts/';
 loadSet('darkVar','../assets/outfits/dark_knight/variants/',['leg_lower_1','leg_lower_2','leg_lower_3']);
@@ -142,8 +147,8 @@ function rr(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);c.fill();c.stroke(
 function drawPart(c,bone,back,t){
   const o=OUT[outfit], key=PART_OF[bone];
   let im=IMG[key];
-  if(o.set){ im=SETS[o.set][key]; const vs=SETS[o.set+'Var']; if(bone==='legF_l'&&vs&&vs[frontLeg]) im=vs[frontLeg]; if(bone==='legB_l'&&vs&&vs[backLeg]) im=vs[backLeg]; }
-  if(im&&im.complete&&im.width){const s=o.pixelArt&&SPEC_PX[key]?{...SPEC_PX[key],h:im.height}:SPEC[key],w=im.width*s.h/im.height;
+  if(o.set){ im=SETS[o.set][bone]||SETS[o.set][key]; const vs=SETS[o.set+'Var']; if(bone==='legF_l'&&vs&&vs[frontLeg]) im=vs[frontLeg]; if(bone==='legB_l'&&vs&&vs[backLeg]) im=vs[backLeg]; }
+  if(im&&im.complete&&im.width){const s=o.pixelArt&&SPEC_PX[key]?{...SPEC_PX[key],h:im.height}:(o.set&&SPEC_SET[o.set]&&SPEC_SET[o.set][key])||SPEC[key],w=im.width*s.h/im.height*(s.sx||1);
     c.imageSmoothingEnabled=!o.pixelArt;
     const sc=back?.92:1, sq=(bone==='torso'||bone==='head')?(1+(curPose.sq||0)):1;
     if(pixelSet&&!o.pixelArt&&PIX.has(im)) im=PIX.get(im);

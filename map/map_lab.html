@@ -33,7 +33,7 @@ input[type=range]{width:100%} input[type=number]{width:90px;background:#14121f;c
       <div class="sub" id="stats" style="margin-top:6px"></div></div>
     <div class="card">
       <div class="row"><label style="margin:0">seed <input type="number" id="seed" value="23"></label><button id="gen">สร้างใหม่</button><button id="rnd">สุ่ม seed</button></div>
-      <div class="row" style="margin-top:8px"><button id="play" class="on">โหมดเดิน (WASD)</button><button id="export">ส่งออกแมพ (JSON)</button></div>
+      <div class="row" style="margin-top:8px"><button id="play" class="on">โหมดเดิน (WASD)</button><button id="export">ส่งออกแมพ (JSON)</button><button id="exportGame">ส่งออกเข้าเกม</button></div>
     </div>
     <div class="card">
       <div class="row" id="presets"><button data-h="7">เช้า</button><button data-h="12" class="on">เที่ยง</button><button data-h="17.5">เย็น</button><button data-h="22">คืน</button></div>
@@ -141,8 +141,11 @@ function buildGround(){const R=RECIPE;groundC.width=R.W;groundC.height=R.H;const
   const plaza=(c,m)=>{c.beginPath();c.ellipse(R.plaza.x,R.plaza.y,R.plaza.rx+62+m,R.plaza.ry+40+m*.6,0,0,7);c.fill();};
   soft(c=>{roads(c,150);plaza(c,10);},c=>{c.fillStyle='rgba(70,50,25,.45)';c.fillRect(0,0,R.W,R.H);},14);           // ดินชื้นรอบขอบ
   soft(c=>{roads(c,132);plaza(c,0);},c=>{c.fillStyle=patOn(c,GROUND.cobble,.45,'#b8a68a');c.fillRect(0,0,R.W,R.H);},6); // หินถนน
-  if(ok(GROUND.plaza)){const pw=(R.plaza.rx+62)*2.25,ph=(R.plaza.ry+40)*2.25,f=R.landmarks.find(l=>l.k==='fountain'),fy=f?f.y*S-30:R.plaza.y;
-    soft(c=>plaza(c,-14),c=>c.drawImage(GROUND.plaza,R.plaza.x-pw/2,fy-ph/2,pw,ph),8);}                             // ลายวงกลมชิ้นเดียว ยืดเต็มลาน
+  // ลาน v2 (แก้ "ไม่เข้าพวก"): ทั้งลานใช้หินถนนก้อนเล็ก (ต่อกันได้) โทนอุ่น · ลายวงกลมเหลือแค่วงรอบน้ำพุ ย่อครึ่ง จางขอบ
+  const WARM='sepia(.3) saturate(1.2) contrast(.82) brightness(1.06)';
+  soft(c=>plaza(c,-14),c=>{c.filter=WARM;c.fillStyle=patOn(c,GROUND.cobble,.3,'#b8a68a');c.fillRect(0,0,R.W,R.H);c.filter='none';},8);
+  if(ok(GROUND.plaza)){const f=R.landmarks.find(l=>l.k==='fountain'),fx=f?f.x*S:R.plaza.x,fy=f?f.y*S-30:R.plaza.y,pw=(R.plaza.rx+62)*1.15,ph=(R.plaza.ry+40)*1.15;
+    soft(c=>{c.beginPath();c.ellipse(fx,fy,pw*.42,ph*.42,0,0,7);c.fill();},c=>{c.filter=WARM;c.globalAlpha=.85;c.drawImage(GROUND.plaza,fx-pw/2,fy-ph/2,pw,ph);c.filter='none';},26);}
   // รายละเอียดพื้น (decals): ของ "งอก" จากพื้นแทนการวางทับ — อบลงพื้นครั้งเดียว
   if(MAP&&document.getElementById('L_decal').checked){let s2=(MAP.seed*7919)>>>0||3;const rr=()=>{s2=(s2*16807)%2147483647;return s2/2147483647;};
     const dec=(n,x,y,w)=>{const im=DECAL[n];if(!ok(im))return;const h=im.height*w/im.width;g.save();g.translate(x,y);if(rr()<.5)g.scale(-1,1);g.drawImage(im,-w/2,-h*.75,w,h);g.restore();};
@@ -156,6 +159,8 @@ function buildGround(){const R=RECIPE;groundC.width=R.W;groundC.height=R.H;const
     // ริมถนน: กรวด/หินหลุด
     for(const [a,b] of R.roads){const L=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/L,uy=(b[1]-a[1])/L;
       for(let d=R.plaza.rx;d<L;d+=55+rr()*60){const sd=rr()<.5?-1:1,off=62+rr()*18;dec(pick(['pebbles_0','pebbles_1','tuft_0','stones_0']),a[0]+ux*d-uy*sd*off,a[1]+uy*d+ux*sd*off*.62,18+rr()*16);}}
+    // ในลาน: หญ้า/ใบไม้แทรกร่องหิน (เบาๆ) ให้ลานดู "ใช้งานจริง" กลืนกับรอบข้าง
+    for(let i=0;i<70;i++){const an=rr()*6.28,rd=Math.sqrt(rr());dec(pick(['tuft_0','tuft_0','tuft_1','leaves_0','leaves_1','pebbles_1']),R.plaza.x+Math.cos(an)*(R.plaza.rx+50)*rd,R.plaza.y+Math.sin(an)*(R.plaza.ry+30)*rd,12+rr()*12);}
     // ในลาน: หินแตก + แอ่งน้ำ
     for(let i=0;i<5;i++){const an=rr()*6.28,rd=.7+.3*rr();dec(pick(['pebbles_0','pebbles_1']),R.plaza.x+Math.cos(an)*R.plaza.rx*rd,R.plaza.y+Math.sin(an)*R.plaza.ry*rd,30+rr()*26);}
     for(let i=0;i<2;i++){const an=rr()*6.28;dec('puddle',R.plaza.x+Math.cos(an)*R.plaza.rx*.6,R.plaza.y+Math.sin(an)*R.plaza.ry*.6,50+rr()*20);}
@@ -278,7 +283,19 @@ function hud(){if(!play)return;const g=ovx;g.save();
 addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)&&play){keys[k]=1;e.preventDefault();}
   if(k==='e'&&near)toast={msg:TALK[near.k],until:performance.now()+2600};if(k==='m')showMap=!showMap;});
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=0;});
-window.__town={P,keys,blocked,step,get near(){return near;},get MAP(){return MAP;}}; // ดีบัก
+// ส่งออกเข้าเกม: พื้นอบเป็นภาพเดียว + รายการของ (ขนาดวาด, ฐานชน, ความลึกฐาน, ป้าย, ข้อความ) -> เกมไม่ต้องรู้กฎของ Map Lab
+function exportGame(){const R=RECIPE;
+  const objects=MAP.objs.map(o=>{const k=KIT[o.k],w=wOf(o),f=FOOT(o);return {k:o.k,x:Math.round(o.x),y:Math.round(o.y),w:Math.round(w),h:k.h,
+    base:BASE[o.k]||.1,tags:k.tags,solid:k.tags.includes('ชน')?{rx:Math.round(f.rx),ry:Math.round(f.ry)}:null,talk:TALK[o.k]||null,
+    night:!!k.night,glow:!!k.glowI,light:k.light||(o.k==='waystone'?{dy:-.6,r:190,col:'120,200,255'}:null)};});
+  const L=R.lake;
+  return {layout:{name:R.name,W:R.W,H:R.H,spawn:MAP.spawn,seed:MAP.seed,warps:R.warps,safe:R.safe,
+    lake:{x:Math.round(L.x*R.W),y:Math.round(L.y*R.H),rx:Math.round(L.rx*R.W),ry:Math.round(L.ry*R.H)},crystal:{h:.34,dy:-1.22},objects},
+    ground:groundC.toDataURL('image/jpeg',.9)};}
+function download(name,href){const a=document.createElement('a');a.href=href;a.download=name;a.click();}
+document.getElementById('exportGame').onclick=()=>{const e=exportGame();
+  download('town_layout.json',URL.createObjectURL(new Blob([JSON.stringify(e.layout)],{type:'application/json'})));download('town_ground.jpg',e.ground);};
+window.__town={P,keys,blocked,step,exportGame,get near(){return near;},get MAP(){return MAP;}}; // ดีบัก
 let hour=12,last=performance.now();
 function frame(ms){const dt=(ms-last)/1000;last=ms;const t=ms/1000;
   if(MAP){

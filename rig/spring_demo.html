@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><title>Spring Bone Demo</title>
+<style>
+body{margin:0;background:#141821;color:#dde;font-family:system-ui,sans-serif}
+.bar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:10px 16px;background:#1d2230}
+button{background:#2d6cdf;color:#fff;border:0;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer}
+label{font-size:13px}canvas{display:block;margin:0 auto;background:#20283a}
+</style></head><body>
+<div class="bar">
+  <button id="run">วิ่ง / หยุด</button><button id="atk">โจมตี</button>
+  <label>k (แข็ง) <input id="k" type="range" min="20" max="300" value="90"> <b id="kv">90</b></label>
+  <label>damp (หน่วง) <input id="d" type="range" min="1" max="30" value="9"> <b id="dv">9</b></label>
+  <label>amt (แรงเหวี่ยง) <input id="a" type="range" min="0" max="4" step=".1" value="1"> <b id="av">1</b></label>
+  <label>max° <input id="m" type="range" min="5" max="60" value="14"> <b id="mv">14</b></label>
+</div>
+<canvas id="cv" width="1000" height="460"></canvas>
+<script src="../engine/rig.js"></script>
+<script>
+const P='../assets/characters/hero2/parts/';
+const HERO2={spec:{head:{h:57.9,px:0.55,py:0.9},torso:{h:62.9,px:0.5,py:0.78},arm_upper:{h:28.3,px:0.5,py:0.226},arm_lower:{h:35.2,px:0.5,py:0.109},leg_upper:{h:34.9,px:0.5,py:0.183},leg_lower:{h:40.5,px:0.5,py:0.115}},
+  bones:{head:[2,-44],armF_u:[-13,-35],armB_u:[11,-34],armF_l:[0,19.2],armB_l:[0,19.2],weapon:[0,25.7],legF_u:[-8,-4],legB_u:[9,-4],legF_l:[0,25.1],legB_l:[0,25.1]},foot:57};
+const mk=()=>RIG.loadOutfit(P,{gear:'../assets/weapons/greatsword/',parts:['head','torso'],boneParts:['armF_u','armF_l','armB_u','armB_l','legF_u','legF_l','legB_u','legB_l'],idleParts:{legF_l:'legF_l_front_toe'},hair:false,leg:null,...HERO2});
+const cfg={sheath:{k:90,damp:9,amt:1,max:14,len:60},weapon:{k:140,damp:10,amt:.6,max:10,len:70}};
+const A=RIG.makeChar({outfit:mk(),scale:1.6,x:250,y:330});
+const B=RIG.makeChar({outfit:mk(),scale:1.6,x:750,y:330,springs:cfg});
+let moving=false,ph=0;
+run.onclick=()=>{moving=!moving};
+atk.onclick=()=>{for(const c of[A,B])RIG.play(c,'โจมตี 1')};
+for(const [id,key] of [['k','k'],['d','damp'],['a','amt'],['m','max']]){const el=document.getElementById(id);
+  el.oninput=()=>{document.getElementById(id+'v').textContent=el.value;cfg.sheath[key]=+el.value;}}
+const c=cv.getContext('2d');let last=performance.now();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(moving){ph+=dt;const v=Math.cos(ph*1.2)*260;for(const [ch,cx] of [[A,250],[B,750]]){ch.x+=v*dt;ch.dir=v>=0?1:-1;}}
+  for(const ch of[A,B])RIG.update(ch,dt,moving);
+  c.clearRect(0,0,cv.width,cv.height);c.fillStyle='#2a3348';c.fillRect(0,330,cv.width,130);
+  c.fillStyle='#fff';c.font='bold 20px system-ui';c.textAlign='center';
+  c.fillText('ไม่มี spring (แข็ง)',250,40);c.fillStyle='#7fe08a';c.fillText('มี spring — ดาบดีดตามเอง',750,40);
+  c.strokeStyle='#444c66';c.beginPath();c.moveTo(500,60);c.lineTo(500,440);c.stroke();
+  for(const ch of[A,B])RIG.draw(c,ch);
+  requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+</script></body></html>

@@ -1,0 +1,30 @@
+{
+ "armF": {
+  "full": 356,
+  "joint": 160,
+  "up_h": 177,
+  "lo_h": 220,
+  "lo_joint": 24
+ },
+ "armB": {
+  "full": 357,
+  "joint": 160,
+  "up_h": 177,
+  "lo_h": 221,
+  "lo_joint": 24
+ },
+ "legF": {
+  "full": 421,
+  "joint": 197,
+  "up_h": 218,
+  "lo_h": 253,
+  "lo_joint": 29
+ },
+ "legB": {
+  "full": 409,
+  "joint": 192,
+  "up_h": 212,
+  "lo_h": 245,
+  "lo_joint": 28
+ }
+}
