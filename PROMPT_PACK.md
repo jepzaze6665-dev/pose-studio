@@ -23,13 +23,21 @@
 
 ---
 
-## 2. บล็อก Style Lock (แปะท้ายทุก prompt)
+## 2. บล็อก Style Lock (แปะท้ายทุก prompt) — v2 ล็อกแล้ว 2026-10-16
+ภาพอ้างอิงหลัก: **`assets/style/char_anchor.png`** (ตัวละคร) + **`assets/style/town_anchor.png`** (โลก) — แนบทั้งสองทุกครั้ง
 
 ```
-STYLE: 2D chibi game art, 2.5-head-tall proportions, thick dark navy outline (#1b1830) of even width,
-flat cel shading with max 2 shadow tones, soft rim light from top-left, 3/4 view facing right,
-clean readable silhouette, no texture noise, no tiny details, no gradients inside shapes,
-colors slightly desaturated except glowing elements.
+STYLE LOCK v2:
+- Art: 2D chibi HD game art, anime-style face, same style as the attached reference character.
+- Proportions: about 2.7 heads tall, big head, large expressive eyes with one white highlight, small nose and mouth.
+- Outline: dark navy #1b1830, even 3px on the outer silhouette, thinner 1.5px on inner lines.
+- Shading: flat cel shading, 1 base + 2 shadow tones + 1 hard highlight, no soft gradients, no texture noise.
+- Light: single light from TOP-LEFT, rim highlight on the top/left edges.
+- View: 3/4 view facing right, full body, feet flat on an invisible ground line.
+- Palette: slightly desaturated medieval colors (navy, leather brown, steel, warm gold trims);
+  only ONE glowing accent per character (e.g. cyan rune or blade edge).
+- Detail level: readable at 120px tall; medium detail on clothes, no tiny patterns.
+- Background: flat pure magenta #FF00FF, no ground shadow, no text, no magenta on the character.
 ```
 - ถ้าเครื่องมือรองรับ **ภาพอ้างอิง** ให้แนบภาพสไตล์ที่เลือกไว้ทุกครั้ง (สำคัญกว่าตัวหนังสือ)
 **แขนงของ Chibi** (เปลี่ยนแค่บรรทัด VARIANT ต่อท้าย Style Lock หลัก — โครงสร้างเดิม rig เดิม)
@@ -266,55 +274,154 @@ Row 3: a dark rock shard spinning (4 rotation frames).
 Near-black fill with thin violet rim, anime style, flat color.
 ```
 
-## 4.6 ชุดของแมพ: เมืองเริ่มต้น (Town Kit)
-กฎร่วมทุกชีท (ล็อกสไตล์ทั้งแมพ — หลักที่ 4 จากคลิปแมพ):
-```
-TOWN KIT STYLE: 2D game environment asset, same art style as the reference character (chibi HD,
-thick dark navy outline, flat cel shading 2 tones, soft light from top-left), 3/4 top-down view
-(camera looking down about 35 degrees), scale: a door is as tall as a 2.5-head chibi character,
-warm cozy medieval fantasy town, colors slightly desaturated, windows drawn UNLIT (dark blue glass).
-Each object separate with wide gaps on a flat pure magenta background (#FF00FF), no shadows on the ground,
-no text, no magenta on objects.
-```
-> แนบภาพตัวละครอัศวินเป็นภาพอ้างอิงทุกครั้ง (ล็อกสเกลและสไตล์) · หน้าต่างให้วาด "ไม่เปิดไฟ" — ผมทำไฟกลางคืนด้วยโค้ดเอง
+## 4.6 ชุดของแมพ: เมืองแรก v2 (ล็อกสไตล์เข้ม)
+ขั้นตอน: **M0 เจนภาพตั้งต้น (Style Anchor) → เลือก 1 ภาพ → แนบภาพนั้นทุก prompt ที่เหลือ** (ภาพอ้างอิงสำคัญกว่าตัวหนังสือ)
+แนบภาพตัวละครอัศวินด้วยทุกครั้ง เพื่อล็อกสเกล · ชื่อไฟล์ชิ้นส่วนใช้ชื่อเดิม (guild_hall, inn, ...) ระบบตัด/normal/ไฟกลางคืนจะทำงานต่อได้ทันที
 
-**TK-1 อาคารหลัก (4 ชิ้น)**
+### บล็อกล็อกสไตล์ (แปะท้ายทุก prompt ในหมวดนี้ · ห้ามแก้ทีละ prompt)
 ```
-4 town buildings: 1 cozy inn/tavern two floors with a hanging mug sign, 2 weapon & armor shop with an anvil
-and crossed-swords sign, 3 item/potion shop with round window and bottles sign, 4 small residential house.
-[TOWN KIT STYLE]
-```
-**TK-2 ศูนย์กลางเมือง (4 ชิ้น)**
-```
-4 town landmarks: 1 Job Guild hall (larger, banners, stone steps), 2 circular stone fountain with water,
-3 teleport waystone (tall carved stone with a glowing rune crystal on top), 4 wooden quest notice board with papers.
-[TOWN KIT STYLE]
-```
-**TK-3 ของประดับ (8 ชิ้น)**
-```
-8 small town props: 1 iron street lamp post, 2 big round shade tree, 3 flower bush, 4 market stall with striped
-awning and goods, 5 barrels and crates cluster, 6 wooden fence segment (straight), 7 stone well with roof, 8 wooden bench.
-[TOWN KIT STYLE]
-```
-**TK-4 พื้น (texture ต่อกันได้ 2 แผ่น · แยกเจนทีละแผ่น)**
-```
-Seamless tileable top-down 3/4 ground texture of [warm cobblestone town path / soft green grass with tiny flowers],
-flat cel-shaded cartoon style matching the reference, low detail, no objects, no shadows, fills the whole image.
+TOWN STYLE LOCK:
+- Art: 2D hand-painted chibi HD game art, same style as the attached reference images.
+- Outline: dark navy #1b1830, even 3px weight on outer silhouette, 1.5px on inner lines.
+- Shading: flat cel shading, exactly 1 base + 2 shadow tones + 1 highlight, no gradients, no texture noise.
+- Light: single sun from TOP-LEFT, highlights on top/left faces, shadows on bottom/right faces.
+- Camera: 3/4 top-down, looking down 35 degrees, NO perspective (parallel / isometric-like), front faces visible.
+- Scale: a door is exactly as tall as the 2.5-head chibi knight; a 2-floor building = 2.5 doors tall.
+- Palette (stay inside it): roofs terracotta #b5543c / slate teal #3f6b73 / moss green #5f7d3a,
+  walls cream plaster #efe1c4 with timber #6b4a32, stone #a39a8c, wood #8a5a36, metal iron #4a4f5c,
+  foliage #6f9a52 / #4e7a3c, water #4fb3c9, accent gold #e0b04a. Overall slightly desaturated, warm and cozy.
+- Windows UNLIT (dark blue glass #2c3a5c), no fire or glow unless asked.
+- Output: every object separate with wide gaps, flat pure magenta background #FF00FF,
+  no ground shadow, no ground under objects, no text, no watermark, no magenta inside objects.
 ```
 
-**TK-5 รายละเอียดพื้น (ground decals) — ตัวเชื่อมของกับพื้น**
+### M0 — ภาพตั้งต้นล็อกสไตล์ (เจน 3–5 ภาพ เลือก 1 · ไม่ได้ใช้ในเกม ใช้เป็นภาพอ้างอิงเท่านั้น)
 ```
-16 small flat ground details for a 2D fantasy MMORPG town, 4x4 grid with wide gaps, seen from the same
-3/4 top-down angle, lying FLAT on the ground (no height): 1-4 grass tufts of different sizes,
-5-6 clusters of small pebbles, 7-8 soft dirt patches (irregular, faded edges), 9-10 fallen leaves,
-11-12 tiny flower patches, 13-14 loose cobblestones and cracks, 15 small puddle, 16 moss patch.
-Match the style, outline thickness and colors of the reference town objects.
-Flat pure magenta background (#FF00FF), no shadows, no text, no magenta on the objects.
+Concept view of a small cozy medieval fantasy starting town for a 2D MMORPG: a round cobblestone plaza with a
+stone fountain in the center, a large Job Guild hall behind it, an inn, a weapon shop and a potion shop around the plaza,
+market stalls, street lamps, trees and flower bushes, four cobblestone roads leaving the plaza.
+The chibi knight from the reference stands in the plaza for scale.
+Use TOWN STYLE LOCK rules for art, outline, light, camera, scale and palette, but draw a full scene on grass (ignore the magenta rule).
 ```
-> ตัวสร้างจะโรย decals รอบฐานของทุกชิ้น (หญ้าขึ้นชิดผนัง กรวดข้างถนน ใบไม้ใต้ต้นไม้) — ทำให้ของ "งอก" จากพื้นแทนการวางทับ
+> บันทึกภาพที่เลือกไว้ที่ `assets/style/town_anchor.png` แล้วแนบทุก prompt ด้านล่าง
 
-**ผมจะทำต่อเมื่อได้ภาพ:** ตัดชิ้น → ติดป้ายเกม (ชน/บัง/ส่องแสง) → สร้าง normal map อัตโนมัติ → ชั้นไฟหน้าต่าง/โคมสำหรับกลางคืน → Map Lab (ใบสั่ง + กฎ + seed) → export เข้าเกม
+### M1 — ภาพรวมทั้งเมือง (แผนผัง · ใช้เป็นเป้าหมายให้ Map Lab วางตาม)
+```
+Full overview of the whole starting town for a 2D MMORPG, wide 3:2 image, the entire map visible edge to edge,
+same 3/4 top-down 35-degree camera (zoomed out, no perspective). Layout:
+- Center: round cobblestone plaza with the three-tier fountain; Job Guild hall directly north of the plaza;
+  teleport waystone south-east of the fountain; quest board north-west of the fountain.
+- Around the plaza: inn (west-north), weapon shop (east-north), potion shop (west-south), red-white market stalls and benches.
+- Four cobblestone roads leave the plaza: north, east, south, west, each lined with small houses on both sides
+  and street lamps alternating sides.
+- Exits at the map edges glowing with a soft blue circle: east road -> grassland, south road -> dark forest, west road -> harbor.
+- Grass everywhere else with clusters of big round trees, flower bushes, two stone wells; wooden fence along
+  the top and bottom edges with gaps where roads pass.
+- Small chibi knight standing in the plaza for scale.
+Use TOWN STYLE LOCK rules for art, outline, light, camera, scale and palette, but draw a full scene on grass (ignore the magenta rule).
+```
+> ภาพนี้ไม่ได้ตัดใช้ในเกม แต่ใช้ 2 อย่าง: (1) ล็อกโทนสีรวมของทั้งเมือง (2) ผมจะปรับใบสั่ง (RECIPE) ใน Map Lab ให้ผังตรงกับภาพนี้
+> เซฟไว้ที่ `assets/style/town_overview.png`
 
+### TK-1 อาคาร (4 ชิ้น · ชีท 2x2)
+```
+4 town buildings in a 2x2 grid: 1 inn / tavern, two floors, hanging wooden mug sign;
+2 weapon & armor shop, one floor plus attic, anvil by the door, crossed-swords sign;
+3 potion / item shop, round window, hanging bottle sign;
+4 small residential house, one floor. All doors face the viewer.
+[TOWN STYLE LOCK]
+```
+### TK-2 จุดสำคัญ (4 ชิ้น · ชีท 2x2)
+```
+4 town landmarks in a 2x2 grid: 1 Job Guild hall, the largest building, stone steps, two hanging banners;
+2 round three-tier stone fountain with water; 3 teleport waystone: tall carved stone pillar with an empty socket on top
+(NO crystal, crystal is a separate item); 4 wooden quest notice board with pinned papers.
+[TOWN STYLE LOCK]
+```
+### TK-2b คริสตัลหินวาร์ป (1 ชิ้น)
+```
+1 floating rune crystal, pale blue, faceted, carved glowing rune line in the middle, sized to sit on top of the waystone.
+[TOWN STYLE LOCK]
+```
+### TK-3 ของประดับ (8 ชิ้น · ชีท 4x2)
+```
+8 town props in a 4x2 grid: 1 iron street lamp post (lamp glass unlit), 2 big round shade tree,
+3 flower bush, 4 market stall with red-white striped awning and goods, 5 barrels and crates cluster,
+6 straight wooden fence segment (tileable left-right), 7 stone well with small wooden roof, 8 wooden bench.
+[TOWN STYLE LOCK]
+```
+### TK-4 พื้นหลายแบบในภาพเดียว (ชีท 3x3 · 9 แบบ)
+```
+Ground texture sheet for a 2D fantasy MMORPG: a 3x3 grid of 9 separate SQUARE ground swatches,
+each swatch the same size, separated by thick pure magenta (#FF00FF) gutters, with a magenta border around the whole sheet.
+Each swatch is an independent SEAMLESS TILEABLE texture filling its square edge to edge (left edge continues into
+right edge, top into bottom), seen from 3/4 top-down 35 degrees, no objects, no shadows, no lighting direction, even detail:
+1 soft green grass with very few tiny flowers, 2 short darker grass, 3 warm cobblestone road (medium stones),
+4 large flat plaza paving stones in a loose circular pattern, 5 packed dirt path, 6 sand,
+7 dark forest floor with moss and needles, 8 shallow clear water, 9 wooden dock planks running left to right.
+Stones and planks must be large and readable (about 6-8 stones across a swatch), not tiny noise.
+[TOWN STYLE LOCK] (ignore its "separate objects" rule; magenta only in the gutters, never inside a swatch)
+```
+> ผมจะตัด 9 ช่องตามกริดเอง แล้วปรับขอบให้ต่อกันไร้รอยอีกชั้น (เผื่อ AI ทำไม่สนิท) → `ground_<ชื่อ>.png`
+> ถ้าอยากได้มากกว่า 9 แบบ เปลี่ยนเป็น 4x4 แล้วเพิ่มรายการ (เช่น หิมะ ทุ่งดอกไม้ หินภูเขา) — ใช้ prompt เดิม
+
+### TK-5 รายละเอียดพื้น (16 ชิ้น · ชีท 4x4)
+```
+16 small flat ground decals in a 4x4 grid, lying FLAT on the ground (no height), same 3/4 angle:
+1-4 grass tufts of different sizes, 5-6 small pebble clusters, 7-8 soft dirt patches with irregular faded edges,
+9-10 fallen leaves, 11-12 tiny flower patches, 13-14 loose cobblestones and cracks, 15 small puddle, 16 moss patch.
+[TOWN STYLE LOCK]
+```
+
+### เช็คก่อนส่งให้ผม (ถ้าไม่ผ่าน เจนใหม่ อย่าแก้มือ)
+- [ ] แสงมาจากซ้ายบนทุกชิ้น · เส้นขอบหนาเท่ากันทุกชีท
+- [ ] มุมกล้องเท่ากัน (เห็นหลังคาและผนังหน้าในสัดส่วนเดียวกัน)
+- [ ] วางอัศวินข้างประตูแล้วสูงเท่าประตูพอดี
+- [ ] สีอยู่ในพาเลต · หน้าต่างไม่เปิดไฟ · พื้นหลังเป็น magenta ล้วน ไม่มีเงาบนพื้น
+
+**ผมจะทำต่อเมื่อได้ภาพ:** ตัดชิ้น → ติดป้ายเกม (ชน/บัง/ส่องแสง) → normal map → ชั้นไฟกลางคืน → Map Lab (ใบสั่ง + กฎ + seed) → export เข้าเกม
+
+---
+## 4.7 หาสไตล์ตัวละครใหม่ (ก่อนทำ NPC / มอน)
+ขั้นตอน: **S1 เทียบ 6 สไตล์ → เลือก 1 → S2 ทดสอบกับฉากเมือง → S3 เทียบทั้งครอบครัว (ฮีโร่+NPC+มอน) → ล็อก → ค่อยทำชีทชิ้นส่วน (C2)**
+แนบ `assets/style/town_anchor.png` ทุกครั้ง เพื่อให้ตัวละครอยู่ในโลกเดียวกับเมือง
+
+### S1 — ตัวละครเดียว 6 สไตล์ (ชีท 3x2)
+```
+Character style exploration sheet for a 2D fantasy MMORPG, 3x2 grid, the SAME young adventurer
+(short messy brown hair, blue tunic, leather belt and boots, short sword) drawn in 6 different chibi art styles,
+full body, 3/4 view facing right, standing idle pose, each on a flat pure magenta (#FF00FF) background:
+1 bright heroic chibi, 2.5 heads tall, thick dark navy outline, flat 2-tone cel shading;
+2 soft cute chibi, 2 heads tall, rounded shapes, pastel colors, warm brown outline;
+3 sharp cool chibi, 3 heads tall, angular shapes, darker palette with one glowing accent;
+4 painterly chibi, 2.5 heads tall, thin outline, soft painted shading like a storybook;
+5 bold comic chibi, 2.5 heads tall, very thick outline, flat colors, strong silhouette;
+6 premium fantasy chibi, 3 heads tall, ornate gold trims, glossy highlights, rich jewel colors.
+Same character design, pose and size in all 6, so only the art style differs. Number each style small under it.
+Light from top-left in all. Must fit the cozy medieval town in the reference image.
+```
+
+### S2 — ทดสอบในฉาก (สไตล์ที่เลือก)
+```
+The chosen character from the reference (style #N) standing in the town plaza from the second reference,
+next to the fountain and a shop door, same 3/4 top-down camera. The door must be as tall as the character.
+Check: outline weight, shading and colors of the character match the buildings.
+```
+> ถ้าตัวละคร "หลุด" จากฉาก (เส้นหนา/บางกว่า, สีสดกว่า) → ปรับบรรทัด STYLE ใน §2 แล้วเจน S1 ใหม่เฉพาะสไตล์นั้น
+
+### S3 — ครอบครัวตัวละคร (ฮีโร่ + NPC + มอน ในสไตล์เดียว · ชีท 4x2)
+```
+Character lineup in the exact art style of the reference character, 4x2 grid, each full body on flat pure magenta (#FF00FF),
+same 3/4 view facing right, same outline, shading and light from top-left, sizes relative to each other:
+1 the hero (reference), 2 friendly shopkeeper NPC with apron, 3 old guild master NPC with staff and robe,
+4 town guard NPC with spear and helmet, 5 small round slime monster (knee height), 6 forest wolf monster (waist height),
+7 mushroom creature monster (knee height), 8 armored goblin miniboss (slightly taller than the hero).
+Monsters use the same outline and shading rules but simpler shapes and one clear color theme each.
+```
+> ผ่านเมื่อ: ทั้ง 8 ตัววางรวมกันแล้วดูเป็นเกมเดียว · มอนอ่านออกจากเงาดำล้วน · ฮีโร่เด่นสุด
+> ล็อกแล้ว: เซฟ `assets/style/char_anchor.png` + แก้บรรทัด STYLE ใน §2 ให้ตรงสไตล์ที่เลือก → ใช้กับ C1–C7 ต่อ
+
+---
 ## 5. Checklist ก่อนส่งงานให้ผม
 - [ ] PNG พื้นใส (ชิ้นส่วน) / พื้นดำ (เอฟเฟค, ชั้นแสง)
 - [ ] ชื่อไฟล์ตรงตามตาราง ตัวพิมพ์เล็ก
