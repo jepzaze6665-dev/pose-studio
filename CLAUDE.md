@@ -6,6 +6,7 @@
 
 ## ความรู้ที่สะสมไว้ (อ่านตามงาน)
 - `knowledge/PRINCIPLES.md` — หลัก 1–16 สกัดจากคลิปสอน (วาดน้อย ข้อมูลขยาย, rig, แมพ, VFX, game feel)
+- `knowledge/NIGHTCAMP_TEARDOWN.md` — แกะไฟล์เกม Night Camp จริง (rig Spine 35 กระดูก/IK/ฟิสิกส์, 164 ท่า, fieldgen แมพ, กฎชน)
 - `knowledge/_raw_notes.md` — โน้ตละเอียดทีละคลิป (c1–c8 + c2/c4-ละเอียด: ค่าองศาท่าจริง, จังหวะวิ่ง 0.67 วิ/รอบ, ทริคขาหน้า)
 - `knowledge/*.png|jpg` — ภาพเทียบก่อน/หลังของงานที่ผ่านมา
 - `PROMPT_PACK.md` — prompt ทั้งหมด + **STYLE LOCK v2** (§2) · TOWN STYLE LOCK (§4.6) · หาสไตล์ตัวละคร (§4.7) · ชีทชิ้นส่วน **C2 v2**
