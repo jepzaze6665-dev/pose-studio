@@ -83,3 +83,21 @@
 3. หมวกเก็บ `fit/seat/clip/brim/dx` หน่วยความกว้างหัว + ตารางคู่หมวก×ผมเฉพาะคู่ที่เพี้ยน
 4. หน้าจัดหมวกใน pose studio: หมวก 1 ใบ × ทุกทรงผมพร้อมกัน (ตาม c6)
 5. สปริงหมวก + ผมหลังห้อยตามหัว
+
+## 5. ทำแล้วในสตูดิโอเรา (2026-10-19) — ภาพรวม `knowledge/nightcamp_8features.jpg`
+| ข้อ | ทำอะไร | ไฟล์ / หน้าทดสอบ |
+|---|---|---|
+| 1 | คลิปตีมี `hit` (เวลาดาเมจ) `lunge` (px) `aim` + กฎ AS/AW/LU/UP + กันปลายอาวุธจมดิน | `engine/rig.js` · `rig/features_lab.html` ช่อง 1 |
+| 2 | `clip.shot` ท่าค้าง → `RIG.alive()` หายใจ/หัวตามช้า/แขนลอย · คลิปคีย์เดียวจาก Pose Studio = shot อัตโนมัติ | ช่อง 2 |
+| 3 | ลำดับวาด `ORDER_FIST`: ปลายแขน → อาวุธ → กำปั้น · ตอนนี้ "กำปั้น" = ภาพปลายแขนเดิมตัดเหลือส่วนล่าง (`outfit.fistCut`, ค่าเริ่ม .74) ไม่ต้องเจนใหม่ | ช่อง 3 |
+| 4 | `RIG.ik2` + `ch.footIK` เท้าที่แตะพื้นปักพื้น · `ch.chains` ผม/ผ้าโซ่สปริง (visc, stiff, damp) · `ch.add` บวกท่าทับ | ช่อง 4a/4b |
+| 5 | `RIG.FAMILY` 6 ตระกูล (ดาบใหญ่ ดาบมือเดียว หอก มีดสั้น ไม้เท้า ขวาน) · เขียนท่าด้วย `blade` = มุมใบในโลก · `ch.family`, `play(ch,'atk1')`, `ch.keepArmed`, `update(ch,dt,'walk')` | ช่อง 5 |
+| 6 | Map Lab: `kind` ต่อชิ้น → `KIND[kind]={player,shot,mob}` · `blocked(x,y,who)` · F ยิงทดสอบ · สไลม์เดินสุ่ม · export มี `kind/blocks` | `map/map_lab.html` (มุมมองการชน) |
+| 7 | `groundN` พื้นกลางคืนวาดใหม่ (โทนฟ้า, หินชื้นวาว, จุดเรือง → ชั้น emissive) เฟดด้วย sun.night | Map Lab ชั้น "พื้น 2 ชุด" |
+| 8 | `engine/autorig.js` ภาพเดียว → mesh ตาราง + น้ำหนัก geodesic 3 กระดูก + วาด affine ทีละสามเหลี่ยม | `rig/autorig_lab.html` (กระต่ายเขาเดียว 9 กระดูก ~250ms) |
+
+**ข้อจำกัดที่เจอจริง (auto-rig):** ส่วนที่ "ทับ" กันในภาพ (หูซ้ายพาดลำตัว) แยกน้ำหนักไม่ได้ → หมุนหู/หัวมากเนื้อตัวถูกลากขาด
+→ ใช้กับท่าเล็ก (หายใจ กระดิก เด้ง) · ท่าใหญ่ให้เจนส่วนที่ทับเป็นชิ้นแยก (แบบสไลม์ 14 ชิ้น) แล้ว auto-rig แต่ละชิ้น
+
+**prompt ชิ้นกำปั้น (ถ้าอยากได้มือที่กำด้ามจริง แทนการตัดภาพ):** เพิ่มในชีท C2 v2 อีก 1 ช่อง —
+"FIST piece: the front hand only, closed fist gripping an invisible horizontal handle (empty hole through the fist), same glove/skin, same scale as the arm piece, thick outline, on magenta" → ตั้งชื่อ `fist.png` แล้วใช้แทน `fistCut`

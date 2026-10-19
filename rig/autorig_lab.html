@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><title>Auto Rig Lab</title>
+<style>
+body{margin:0;background:#141821;color:#dde;font-family:system-ui,sans-serif}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 16px;background:#1d2230;font-size:13px}
+button{background:#2a3350;color:#fff;border:1px solid #3a4560;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer}button.on{background:#2d6cdf}
+canvas{display:block;margin:0 auto;max-width:100%;height:auto}
+</style></head><body>
+<div class="bar"><b>Auto Rig Lab</b> — ภาพเดียว ไม่ตัดชิ้น → mesh + กระดูก 9 ท่อน → ขยับได้
+  <span id="acts"></span><label><input type="checkbox" id="dbg" checked> ดู mesh + กระดูก</label><span id="info"></span></div>
+<canvas id="cv" width="1500" height="620"></canvas>
+<script src="../engine/autorig.js"></script>
+<script>
+// กระต่ายเขาเดียว (ภาพที่ผู้ใช้เจน: assets/monsters/horn_bunny/sprite.png 512x473) — กระดูกวางเองครั้งเดียว ที่เหลือเครื่องทำ
+const BONES=[{n:'body',p:null,h:[201,335],t:[302,290]},
+ {n:'chest',p:'body',h:[302,290],t:[347,234]},
+ {n:'head',p:'chest',h:[347,234],t:[392,127]},
+ {n:'earL',p:'head',h:[302,121],t:[37,324]},
+ {n:'earR',p:'head',h:[431,155],t:[482,358]},
+ {n:'horn',p:'head',h:[409,87],t:[443,20]},
+ {n:'tail',p:'body',h:[144,256],t:[54,206]},
+ {n:'legF',p:'chest',h:[313,358],t:[324,448]},
+ {n:'legB',p:'body',h:[167,369],t:[144,448]}];
+const FEET=[240,450]; // จุดยืน (กลางเท้า) ในภาพ
+// ท่า = ฟังก์ชันเวลา → มุม/เลื่อน/ย่อขยายของกระดูก · หู/หาง ตามช้ากว่าหัว (overlap) = ดูนิ่มมีชีวิต
+const sm=x=>x*x*(3-2*x);
+const ACTS={
+ 'หายใจ':t=>{const b=Math.sin(t*2.4),l=Math.sin(t*2.4-1.2),l2=Math.sin(t*2.4-2);return {body:{sy:1+.025*b,y:-2*b},chest:{r:-1.5*b},head:{r:2*l,y:-1.5*b},
+   earL:{r:-4*l2},earR:{r:5*l2},tail:{r:8*Math.sin(t*5)},horn:{}};},
+ 'กระดิกหู':t=>{const w=Math.sin(t*9)*Math.max(0,Math.sin(t*1.6));return {head:{r:-4*Math.sin(t*1.6)},earL:{r:-18*w},earR:{r:14*Math.sin(t*9-1)*Math.max(0,Math.sin(t*1.6))},tail:{r:15*Math.sin(t*7)}};},
+ 'พุ่งขวิด':t=>{const p=t%1.6,wind=sm(Math.min(1,p/.5)),go=p>.5?sm(Math.min(1,(p-.5)/.12)):0,back=p>.9?sm(Math.min(1,(p-.9)/.6)):0,k=go*(1-back);
+   return {body:{x:-14*wind*(1-go)+30*k,sy:1-.06*wind*(1-go),r:2*wind*(1-go)-3*k},chest:{r:-3*k},head:{r:6*wind*(1-go)-7*k},
+     earL:{r:-9*k+5*wind*(1-go)},earR:{r:10*k},legF:{r:-10*k},legB:{r:10*k},tail:{r:-10*k}};}, /* หูทับลำตัวในภาพ: หมุนมากจะลากเนื้อตัวไปด้วย → จำกัดมุม */
+ 'กระโดด':t=>{const p=t%1.2,air=p<.7?Math.sin(p/.7*Math.PI):0,sq=p>=.7?Math.sin((p-.7)/.5*Math.PI):0,pre=p<.12?Math.sin(p/.12*Math.PI):0;
+   return {body:{y:-90*air+6*sq,sy:1+.12*air-.12*sq-.08*pre,s:1-.04*air},head:{r:-6*air+5*sq},earL:{r:22*air-14*sq},earR:{r:-18*air+12*sq},legF:{r:-25*air},legB:{r:30*air},tail:{r:-15*air}};}};
+let cur='หายใจ';const acts=document.getElementById('acts');
+for(const n in ACTS){const b=document.createElement('button');b.textContent=n;b.onclick=()=>{cur=n;[...acts.children].forEach(x=>x.classList.toggle('on',x===b));};acts.appendChild(b);}acts.children[0].classList.add('on');
+const img=new Image();img.src='../assets/monsters/horn_bunny/sprite.png';
+const cv=document.getElementById('cv'),c=cv.getContext('2d');let rig=null,T=0;
+img.onload=()=>{const t0=performance.now();rig=AUTORIG.build(img,BONES,{grid:12});
+  document.getElementById('info').textContent=`สร้าง rig ใน ${Math.round(performance.now()-t0)} ms · จุด ${rig.verts.length} · สามเหลี่ยม ${rig.tris.length} · กระดูก ${rig.bones.length}`;};
+function heat(rig,name,x,y,sc){const w=AUTORIG.weightOf(rig,name),G=rig.G;c.save();c.translate(x,y);c.scale(sc,sc);c.translate(-FEET[0],-FEET[1]);
+  rig.verts.forEach((v,i)=>{if(w[i]<.05)return;c.fillStyle=`rgba(255,${Math.round(90+120*(1-w[i]))},60,${.25+.6*w[i]})`;c.fillRect(v.x-G/2,v.y-G/2,G,G);});c.restore();}
+function frame(dt){T+=dt;c.fillStyle='#141821';c.fillRect(0,0,cv.width,cv.height);
+  const gy=560,cols=[[250,'1. ภาพเดียวจาก AI (นิ่ง)'],[750,'2. เครื่องสร้าง mesh + น้ำหนัก (สี = น้ำหนักกระดูกหู)'],[1250,'3. ขยับด้วยกระดูก: '+cur]];
+  for(const [x,t] of cols){c.fillStyle='#1c2231';c.fillRect(x-245,10,490,600);c.fillStyle='#283247';c.fillRect(x-245,gy,490,50);c.strokeStyle='#7fe08a';c.beginPath();c.moveTo(x-245,gy);c.lineTo(x+245,gy);c.stroke();
+    c.fillStyle='#fff';c.font='bold 16px system-ui';c.textAlign='center';c.fillText(t,x,40);}
+  if(!rig){requestAnimationFrame?0:0;return;}const sc=.85;
+  c.drawImage(img,250-FEET[0]*sc,gy-FEET[1]*sc,img.width*sc,img.height*sc);
+  AUTORIG.draw(c,rig,{},750,gy,{scale:sc,anchor:FEET,debug:true});heat(rig,'earL',750,gy,sc);
+  const pose=ACTS[cur](T),air=pose.body&&pose.body.y<0?-pose.body.y:0;
+  c.fillStyle='rgba(0,0,0,.3)';c.beginPath();c.ellipse(1250,gy,150*(1-air/250),18*(1-air/250),0,0,7);c.fill();
+  AUTORIG.draw(c,rig,pose,1250,gy,{scale:sc,anchor:FEET,debug:document.getElementById('dbg').checked});}
+window.__lab={frame,setAct:n=>cur=n,manual:false};
+let last=performance.now();function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!__lab.manual)frame(dt);requestAnimationFrame(loop);}requestAnimationFrame(loop);
+</script></body></html>

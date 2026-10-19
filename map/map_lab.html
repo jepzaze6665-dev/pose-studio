@@ -26,7 +26,7 @@ input[type=range]{width:100%} input[type=number]{width:90px;background:#14121f;c
 <body>
 <div class="wrap">
   <div class="stage"><canvas id="view" width="960" height="600"></canvas><canvas id="ov" width="960" height="600"></canvas>
-    <div class="sub" style="margin-top:6px">ลากเมาส์ = เลื่อนกล้อง · WASD/ลูกศร = เดิน · E = คุย/ใช้ · M = เปิด/ปิดแผนที่</div></div>
+    <div class="sub" style="margin-top:6px">ลากเมาส์ = เลื่อนกล้อง · WASD/ลูกศร = เดิน · E = คุย/ใช้ · F = ยิงทดสอบการชน · M = เปิด/ปิดแผนที่</div></div>
   <div class="side">
     <div class="card"><h1>Map Lab — เมืองเริ่มต้น</h1>
       <div class="sub">ชุดของ 17 ชิ้น (v2) + <b>ใบสั่งแมพ + กฎ + seed</b> = เมืองทั้งผืน · ลากเพื่อเลื่อนกล้อง</div>
@@ -49,6 +49,8 @@ input[type=range]{width:100%} input[type=number]{width:90px;background:#14121f;c
       <label><span>เงาทอดตามแดด</span><input type="checkbox" id="L_shadow" checked></label>
       <label><span>ไฟกลางคืน + แสงส่องพื้น</span><input type="checkbox" id="L_night" checked></label>
       <label><span>แสงฟุ้ง (bloom)</span><input type="checkbox" id="L_bloom" checked></label>
+      <label><span>พื้น 2 ชุด กลางวัน/คืน (เฟดผสม)</span><input type="checkbox" id="L_ground2" checked></label>
+      <label><span>มุมมองการชน (F = ยิงทดสอบ)</span><select id="colView"><option value="off">ปิด</option><option value="player">ผู้เล่น</option><option value="shot">กระสุน</option><option value="mob">มอน</option></select></label>
       <label><span>ป้ายเกม (ชน/บัง/แสง/วาร์ป)</span><input type="checkbox" id="L_tags"></label>
       <label><span>ดู normal map</span><input type="checkbox" id="L_normal"></label>
       <div class="sub legend"><span style="background:#ff5a6a"></span>ชน<span style="background:#5aa8ff"></span>บังตัวละคร<span style="background:#ffd166"></span>แสง<span style="background:#b45cff"></span>วาร์ป/โต้ตอบ</div>
@@ -64,6 +66,13 @@ const KIT_DEF={ // h = ความสูงบนจอ, tags = สิ่งท
   fountain:{h:210,tags:['ชน']}, waystone:{h:170,tags:['ชน','วาร์ป','แสง'],glow:1}, quest_board:{h:140,tags:['ชน','โต้ตอบ']},
   lamp:{h:125,tags:['ชน','แสง'],night:1,light:{dy:-.55,r:150}}, tree:{h:210,tags:['ชน','บัง']}, pine:{h:230,tags:['ชน','บัง']}, bush:{h:62,tags:['ผ่านได้']},
   stall:{h:125,tags:['ชน','โต้ตอบ']}, well:{h:120,tags:['ชน']}, barrels:{h:72,tags:['ชน']}, fence:{h:58,tags:['ชน']}, bench:{h:55,tags:['ผ่านได้']}};
+// ประเภทของ (แบบ Night Camp fieldgen: tree|house|tall|rock|bush|post|fence|low) → ตัดสินว่า "ใคร" ชนของชิ้นนี้
+//   player = ตัวละครเดินอ้อม · shot = กระสุน/เวทบินผ่านไม่ได้ · mob = มอนเดินอ้อม (มอนไม่สนของตกแต่ง เดินลัดได้)
+const KIND={house:{player:1,shot:1,mob:1},tree:{player:1,shot:0,mob:0},rock:{player:1,shot:0,mob:0},post:{player:1,shot:0,mob:0},
+  fence:{player:1,shot:0,mob:1},low:{player:0,shot:0,mob:0},water:{player:1,shot:1,mob:1}};
+const KIND_OF={guild_hall:'house',inn:'house',weapon_shop:'house',item_shop:'house',house:'house',fountain:'house',stall:'house',
+  waystone:'post',quest_board:'post',lamp:'post',tree:'tree',pine:'tree',well:'rock',barrels:'rock',fence:'fence',bush:'low',bench:'low'};
+for(const n in KIT_DEF)KIT_DEF[n].kind=KIND_OF[n]||'rock';
 // จุดโต้ตอบ: ข้อมูลล้วน (หลักที่ 16) — เกมจริงอ่านจาก town.json
 const TALK={guild_hall:'กิลด์นักผจญภัย: ลงทะเบียนอาชีพ / เลื่อนขั้น',inn:'โรงเตี๊ยม: พักฟื้น HP/SP เต็ม (50 G)',weapon_shop:'ร้านอาวุธ: ดาบ หอก ธนู',
   item_shop:'ร้านของใช้: ยาแดง ยาฟ้า ปีกแมลงวัน',quest_board:'บอร์ดเควส: กำจัดสไลม์ 10 ตัว (ทุ่งหญ้าลมเย็น)',waystone:'หินวาร์ป: บันทึกจุดเกิดแล้ว',
@@ -123,13 +132,13 @@ function generate(seed){
   for(const fy of R.fences)for(let x=40;x<R.W;x+=62){const y=fy*S+(fy<.1?60:0);if(roadD(x,y)>110&&!inLake(x,y,30))add({k:'fence',x,y});}
   // 10) จุดเกิดผู้เล่น
   MAP={seed,objs,spawn:{x:R.plaza.x+120,y:R.plaza.y+120}};
-  for(let i=0;i<60&&blocked(MAP.spawn.x,MAP.spawn.y);i++)MAP.spawn.x+=12;resetPlayer();
+  for(let i=0;i<60&&blocked(MAP.spawn.x,MAP.spawn.y);i++)MAP.spawn.x+=12;resetPlayer();spawnMobs();
   buildGround();
   const cnt={};objs.forEach(o=>cnt[o.k]=(cnt[o.k]||0)+1);
   document.getElementById('stats').innerHTML=`วางเอง <b>${objs.filter(o=>o.manual).length}</b> ชิ้น · ตัวสร้างวาง <b>${objs.filter(o=>!o.manual).length}</b> ชิ้น · ใช้ภาพ ${Object.keys(KIT).length} แบบ`;
 }
 // พื้น: หญ้าทั้งผืน + ถนนหิน + ลาน (texture ต่อกันได้จาก TK-4)
-const groundC=document.createElement('canvas');
+const groundC=document.createElement('canvas'),groundN=document.createElement('canvas');let NIGHT=0,GLOWDOTS=[];
 function buildGround(){const R=RECIPE;groundC.width=R.W;groundC.height=R.H;const g=groundC.getContext('2d');
   const pat=(im,sc)=>{const p=g.createPattern(im,'repeat');p.setTransform(new DOMMatrix().scale(sc,sc*.62));return p;}; // บีบตามมุมกล้อง
   g.fillStyle=ok(GROUND.grass)?pat(GROUND.grass,.7):'#6f9a52';g.fillRect(0,0,R.W,R.H);
@@ -176,7 +185,21 @@ function buildGround(){const R=RECIPE;groundC.width=R.W;groundC.height=R.H;const
    soft(c=>e(c,0),c=>{c.fillStyle=patOn(c,GROUND.water,.6,'#4fb3c9');c.fillRect(0,0,R.W,R.H);},10);
    g.fillStyle=patOn(g,GROUND.dock,.5,'#8a5a36');g.fillRect(0,ly-34,Lk.rx*R.W*.9+60,68);}
   // วาร์ป: วงแสงบนพื้น
-  for(const w of R.warps){g.save();g.translate(w.x,w.y);g.scale(1,.45);const gr=g.createRadialGradient(0,0,10,0,0,80);gr.addColorStop(0,'rgba(160,220,255,.9)');gr.addColorStop(.6,'rgba(90,150,255,.4)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.beginPath();g.arc(0,0,80,0,7);g.fill();g.restore();}}
+  for(const w of R.warps){g.save();g.translate(w.x,w.y);g.scale(1,.45);const gr=g.createRadialGradient(0,0,10,0,0,80);gr.addColorStop(0,'rgba(160,220,255,.9)');gr.addColorStop(.6,'rgba(90,150,255,.4)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.beginPath();g.arc(0,0,80,0,7);g.fill();g.restore();}
+  buildNight();}
+// พื้นกลางคืน "วาดใหม่" ไม่ใช่แค่หรี่ไฟ (Night Camp fieldgen วาดพื้น 2 รอบแล้วเฟดผสม): โทนฟ้าอมเขียว · หินถนนชื้นมีเงาวาว
+// · ดอกไม้/มอสเรืองแสง (จุดเรืองเก็บเป็นรายการ ไปวาดในชั้นแสง emissive ตอนกลางคืน)
+function buildNight(){const R=RECIPE;groundN.width=R.W;groundN.height=R.H;const g=groundN.getContext('2d');
+  g.filter='saturate(.55) hue-rotate(-18deg) brightness(.95) contrast(1.12)';g.drawImage(groundC,0,0);g.filter='none';
+  g.globalCompositeOperation='multiply';g.fillStyle='rgb(150,175,235)';g.fillRect(0,0,R.W,R.H);g.globalCompositeOperation='source-over';
+  let s=((MAP?MAP.seed:1)*104729)>>>0||7;const rr=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  // ถนนชื้น: ประกายจันทร์บนหินตามแนวถนน
+  g.globalCompositeOperation='screen';for(const [a,b] of R.roads){const L=Math.hypot(b[0]-a[0],b[1]-a[1]);for(let d=0;d<L;d+=14){const u=d/L,x=a[0]+(b[0]-a[0])*u+(rr()-.5)*110,y=a[1]+(b[1]-a[1])*u+(rr()-.5)*70;
+    g.fillStyle=`rgba(160,190,255,${.08+rr()*.12})`;g.beginPath();g.ellipse(x,y,3+rr()*7,1.5+rr()*2,0,0,7);g.fill();}}
+  g.globalCompositeOperation='source-over';
+  GLOWDOTS=[];const onPaved=(x,y)=>((x-R.plaza.x)/(R.plaza.rx+120))**2+((y-R.plaza.y)/(R.plaza.ry+90))**2<1||inLake(x,y,40);
+  for(let i=0;i<420;i++){const x=rr()*R.W,y=rr()*R.H;if(onPaved(x,y))continue;const c=rr()<.6?'140,255,200':rr()<.5?'255,170,230':'160,200,255';
+    GLOWDOTS.push({x,y,r:1.5+rr()*2.5,c,ph:rr()*6.28});g.fillStyle=`rgba(${c},.85)`;g.beginPath();g.arc(x,y,1.4,0,7);g.fill();}}
 
 // ====================== เรนเดอร์ (albedo / normal / เงา / ไฟ → WebGL) ======================
 const view=document.getElementById('view'),VW=view.width,VH=view.height;
@@ -193,7 +216,7 @@ const BASE={fountain:.32,well:.3,stall:.26,bench:.34,barrels:.3,bush:.3,fence:.2
   guild_hall:.2,inn:.22,weapon_shop:.24,item_shop:.24,house:.24};
 const AO_W=k=>({pine:.3,tree:.32,lamp:.55,fence:.5,bench:.5,bush:.5,barrels:.5,stall:.5,well:.5}[k]||.52);
 function scene(g,which,t){
-  if(which==='a')g.drawImage(groundC,cam.x,cam.y,VW,VH,0,0,VW,VH);else{g.fillStyle='rgb(128,128,255)';g.fillRect(0,0,VW,VH);}
+  if(which==='a'){g.drawImage(groundC,cam.x,cam.y,VW,VH,0,0,VW,VH);if(NIGHT>0&&groundN.width){g.globalAlpha=NIGHT;g.drawImage(groundN,cam.x,cam.y,VW,VH,0,0,VW,VH);g.globalAlpha=1;}}else{g.fillStyle='rgb(128,128,255)';g.fillRect(0,0,VW,VH);}
   const list=MAP.objs.filter(o=>visible(o));const h={hero:1,x:P.x,y:P.y};list.push(h);
   if(which==='a'&&document.getElementById('L_ao').checked){ // เงาสัมผัสพื้น (contact shadow): ทำให้ของ "ยืนบนพื้น" ไม่ลอย
     for(const o of list){const bd=o.hero?0:KIT[o.k].h*(BASE[o.k]||.1),w=o.hero?34:Math.max(wOf(o)*AO_W(o.k),wOf(o)*.5*(bd>20?1:0)),x=o.x-cam.x,y=o.y-cam.y-(o.hero?0:bd*.5+KIT[o.k].h*.02);
@@ -217,6 +240,8 @@ function shadows(g,sun){g.clearRect(0,0,VW,VH);if(sun.elev<=0.02)return;
 function emissive(g,t,night){g.clearRect(0,0,VW,VH);if(night<=0)return;
   // แสงส่องพื้นรอบโคม/หินวาร์ป (point light) — วาดก่อน แล้วหน้าต่างทับ
   g.globalCompositeOperation='lighter';
+  if(NIGHT>0)for(const d of GLOWDOTS){const x=d.x-cam.x,y=d.y-cam.y;if(x<-20||y<-20||x>VW+20||y>VH+20)continue;const a=NIGHT*(.55+.45*Math.sin(t*2+d.ph));
+    const gr=g.createRadialGradient(x,y,0,x,y,d.r*5);gr.addColorStop(0,`rgba(${d.c},${a})`);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(x-d.r*5,y-d.r*5,d.r*10,d.r*10);}
   for(const o of MAP.objs){if(!visible(o,200))continue;const k=KIT[o.k],x=o.x-cam.x,y=o.y-cam.y;
     if(k.light||o.k==='waystone'){const r=o.k==='waystone'?190:k.light.r,col=o.k==='waystone'?'120,200,255':'255,180,90',fl=.85+.15*Math.sin(t*5+o.x);
       g.save();g.translate(x,y);g.scale(1,.55);const gr=g.createRadialGradient(0,0,0,0,0,r);gr.addColorStop(0,`rgba(${col},${.55*night*fl})`);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.beginPath();g.arc(0,0,r,0,7);g.fill();g.restore();}}
@@ -260,12 +285,29 @@ function tagsOverlay(){ovx.clearRect(0,0,VW,VH);
 // ====================== โหมดเดิน: ชน / บัง / โต้ตอบ / วาร์ป ======================
 const P={x:0,y:0,face:1,moving:false,speed:260};let camFree=false; /* ลากเมาส์ = กล้องอิสระ, กด WASD = กลับมาตามตัวละคร */let play=true,showMap=true,near=null,toast=null;const keys={};
 const FOOT=o=>{const w=wOf(o);return {rx:w*({pine:.12,tree:.12,lamp:.08,fence:.5,well:.32,fountain:.42,waystone:.25,quest_board:.3,stall:.38,barrels:.3}[o.k]||.4),ry:w*.13};}; // ชนแค่ "ฐาน" ไม่ใช่ทั้งภาพ
-function blocked(x,y){if(x<20||y<120||x>RECIPE.W-20||y>RECIPE.H-50||inLake(x,y,20))return true;
-  for(const o of MAP.objs){if(!KIT[o.k].tags.includes('ชน'))continue;const f=FOOT(o);if(((x-o.x)/f.rx)**2+((y-o.y+f.ry*.3)/f.ry)**2<1)return true;}return false;}
+function blocked(x,y,who='player'){if(x<20||y<120||x>RECIPE.W-20||y>RECIPE.H-50||inLake(x,y,20))return true; // ขอบแมพ + น้ำ: ทุกคนชน
+  for(const o of MAP.objs){const k=KIT[o.k];if(!KIND[k.kind][who]||(who==='player'&&!k.tags.includes('ชน')))continue;const f=FOOT(o);if(((x-o.x)/f.rx)**2+((y-o.y+f.ry*.3)/f.ry)**2<1)return true;}return false;}
+// ทดสอบการชนแยกผู้ชน: F = ยิงกระสุนไปทางที่หัน · สไลม์เดินสุ่ม (ชนแบบมอน)
+const SHOTS=[],MOBS=[];let lastDir=[1,0];
+function spawnMobs(){MOBS.length=0;let s=97;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  for(let i=0;i<8;i++){let x,y,n=0;do{x=RECIPE.plaza.x+(r()-.5)*900;y=RECIPE.plaza.y+(r()-.5)*600;}while(blocked(x,y,'mob')&&++n<50);MOBS.push({x,y,vx:0,vy:0,t:r()*3,hop:r()*6});}}
+function stepAgents(dt){for(const m of MOBS){m.t-=dt;m.hop+=dt*6;if(m.t<0){const a=Math.random()*6.28;m.vx=Math.cos(a)*70;m.vy=Math.sin(a)*50;m.t=1+Math.random()*2;}
+    const nx=m.x+m.vx*dt,ny=m.y+m.vy*dt;if(!blocked(nx,m.y,'mob'))m.x=nx;else m.vx*=-1;if(!blocked(m.x,ny,'mob'))m.y=ny;else m.vy*=-1;}
+  for(const b of SHOTS){if(b.dead){b.dead+=dt;continue;}b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(b.life<0||blocked(b.x,b.y,'shot'))b.dead=1e-3;}
+  for(let i=SHOTS.length-1;i>=0;i--)if(SHOTS[i].dead>.35)SHOTS.splice(i,1);}
+function shoot(){const [dx,dy]=lastDir,l=Math.hypot(dx,dy)||1;SHOTS.push({x:P.x+dx/l*30,y:P.y-30+dy/l*20,vx:dx/l*620,vy:dy/l*620*.75,life:1.6,dead:0});}
+function drawAgents(g){const who=document.getElementById('colView').value;
+  if(who!=='off')for(const o of MAP.objs){if(!visible(o))continue;const k=KIT[o.k],f=FOOT(o),b=KIND[k.kind][who]&&(who!=='player'||k.tags.includes('ชน'));
+    g.strokeStyle=b?'#ff5a6a':'rgba(123,227,155,.6)';g.lineWidth=b?2.5:1.2;g.setLineDash(b?[]:[4,4]);g.beginPath();g.ellipse(o.x-cam.x,o.y-cam.y-f.ry*.3,f.rx,f.ry,0,0,7);g.stroke();
+    if(b){g.fillStyle='rgba(255,90,106,.18)';g.fill();}g.setLineDash([]);g.fillStyle='#fff';g.font='10px system-ui';g.textAlign='center';g.fillText(k.kind,o.x-cam.x,o.y-cam.y+f.ry+10);}
+  for(const m of MOBS){const x=m.x-cam.x,y=m.y-cam.y,h=Math.abs(Math.sin(m.hop))*8;g.fillStyle='rgba(0,0,0,.3)';g.beginPath();g.ellipse(x,y,16,5,0,0,7);g.fill();
+    g.fillStyle='#6fd0ff';g.strokeStyle='#1b3550';g.lineWidth=2;g.beginPath();g.ellipse(x,y-12-h,17,13,0,0,7);g.fill();g.stroke();g.fillStyle='#14202c';g.fillRect(x-6,y-16-h,3,4);g.fillRect(x+4,y-16-h,3,4);}
+  for(const b of SHOTS){const x=b.x-cam.x,y=b.y-cam.y;if(b.dead){const k=b.dead/.35;g.strokeStyle=`rgba(255,200,90,${1-k})`;g.lineWidth=3;g.beginPath();g.arc(x,y,6+k*24,0,7);g.stroke();continue;}
+    g.fillStyle='#ffd166';g.beginPath();g.arc(x,y,6,0,7);g.fill();g.strokeStyle='rgba(255,209,102,.5)';g.lineWidth=4;g.beginPath();g.moveTo(x,y);g.lineTo(x-b.vx*.04,y-b.vy*.04);g.stroke();}}
 function occludes(o){if(!play||!KIT[o.k].tags.includes('บัง')||o.y<=P.y)return false;const w=wOf(o)*.5;return Math.abs(P.x-o.x)<w&&P.y>o.y-KIT[o.k].h*.95;}
 function resetPlayer(){P.x=MAP.spawn.x;P.y=MAP.spawn.y;}
 function step(dt){let dx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),dy=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0);
-  P.moving=!!(dx||dy);if(P.moving)camFree=false;if(P.moving){const l=Math.hypot(dx,dy);dx/=l;dy/=l;if(dx)P.face=dx<0?-1:1;
+  P.moving=!!(dx||dy);if(P.moving)camFree=false;if(P.moving){const l=Math.hypot(dx,dy);dx/=l;dy/=l;if(dx)P.face=dx<0?-1:1;lastDir=[dx,dy];
     const vx=dx*P.speed*dt,vy=dy*P.speed*dt*.75; // แกน y ช้ากว่า = มุมกล้องเอียง
     if(!blocked(P.x+vx,P.y))P.x+=vx;if(!blocked(P.x,P.y+vy))P.y+=vy;} // แยกแกน = ไถลตามขอบได้
   near=null;let bd=1e9;for(const o of MAP.objs){if(!TALK[o.k])continue;const d=Math.hypot(P.x-o.x,(P.y-o.y)*1.6)-wOf(o)*.45;if(d<70&&d<bd){bd=d;near=o;}}
@@ -281,12 +323,12 @@ function hud(){if(!play)return;const g=ovx;g.save();
     g.fillStyle='#fff';g.beginPath();g.arc(mx+P.x*s,my+P.y*s,3.5,0,7);g.fill();g.strokeStyle='rgba(255,255,255,.6)';g.strokeRect(mx+cam.x*s,my+cam.y*s,VW*s,VH*s);}
   g.restore();}
 addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)&&play){keys[k]=1;e.preventDefault();}
-  if(k==='e'&&near)toast={msg:TALK[near.k],until:performance.now()+2600};if(k==='m')showMap=!showMap;});
+  if(k==='f'&&play)shoot();if(k==='e'&&near)toast={msg:TALK[near.k],until:performance.now()+2600};if(k==='m')showMap=!showMap;});
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=0;});
 // ส่งออกเข้าเกม: พื้นอบเป็นภาพเดียว + รายการของ (ขนาดวาด, ฐานชน, ความลึกฐาน, ป้าย, ข้อความ) -> เกมไม่ต้องรู้กฎของ Map Lab
 function exportGame(){const R=RECIPE;
   const objects=MAP.objs.map(o=>{const k=KIT[o.k],w=wOf(o),f=FOOT(o);return {k:o.k,x:Math.round(o.x),y:Math.round(o.y),w:Math.round(w),h:k.h,
-    base:BASE[o.k]||.1,tags:k.tags,solid:k.tags.includes('ชน')?{rx:Math.round(f.rx),ry:Math.round(f.ry)}:null,talk:TALK[o.k]||null,
+    base:BASE[o.k]||.1,tags:k.tags,kind:k.kind,blocks:KIND[k.kind],solid:k.tags.includes('ชน')?{rx:Math.round(f.rx),ry:Math.round(f.ry)}:null,talk:TALK[o.k]||null,
     night:!!k.night,glow:!!k.glowI,light:k.light||(o.k==='waystone'?{dy:-.6,r:190,col:'120,200,255'}:null)};});
   const L=R.lake;
   return {layout:{name:R.name,W:R.W,H:R.H,spawn:MAP.spawn,seed:MAP.seed,warps:R.warps,safe:R.safe,
@@ -295,13 +337,13 @@ function exportGame(){const R=RECIPE;
 function download(name,href){const a=document.createElement('a');a.href=href;a.download=name;a.click();}
 document.getElementById('exportGame').onclick=()=>{const e=exportGame();
   download('town_layout.json',URL.createObjectURL(new Blob([JSON.stringify(e.layout)],{type:'application/json'})));download('town_ground.jpg',e.ground);};
-window.__town={P,keys,blocked,step,exportGame,get near(){return near;},get MAP(){return MAP;}}; // ดีบัก
+window.__town={P,keys,blocked,step,shoot,SHOTS,MOBS,stepAgents,get hour(){return hour;},set hour(v){hour=v;},exportGame,get near(){return near;},get MAP(){return MAP;}}; // ดีบัก
 let hour=12,last=performance.now();
 function frame(ms){const dt=(ms-last)/1000;last=ms;const t=ms/1000;
   if(MAP){
   if(document.getElementById('auto').checked){hour=(hour+dt)%24;document.getElementById('hour').value=hour;}
   const hh=Math.floor(hour),mm=Math.floor((hour-hh)*60);document.getElementById('hv').textContent=`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
-  if(play)step(Math.min(dt,.05));const sun=sunAt(hour);
+  if(play)step(Math.min(dt,.05));stepAgents(Math.min(dt,.05));const sun=sunAt(hour);NIGHT=document.getElementById('L_ground2').checked?sun.night:0;
   ax.clearRect(0,0,VW,VH);scene(ax,'a',t);nx.clearRect(0,0,VW,VH);scene(nx,'n',t);shadows(sx,sun);
   emissive(ex,t,document.getElementById('L_night').checked?sun.night:0);
   [albedo,normal,shadowC,emis].forEach((c,i)=>{gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,TX[i]);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,c);});
@@ -309,7 +351,7 @@ function frame(ms){const dt=(ms-last)/1000;last=ms;const t=ms/1000;
   gl.uniform3fv(U('sunCol'),sun.col);gl.uniform1f(U('amb'),sun.amb);gl.uniform1f(U('night'),sun.night);
   gl.uniform1f(U('useLight'),document.getElementById('L_light').checked?1:0);gl.uniform1f(U('useShadow'),document.getElementById('L_shadow').checked?1:0);
   gl.uniform1f(U('showN'),document.getElementById('L_normal').checked?1:0);
-  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);tagsOverlay();hud();}
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);tagsOverlay();drawAgents(ovx);hud();}
   requestAnimationFrame(frame);}
 // ---- UI ----
 function fitOv(){const r=view.getBoundingClientRect();ov.style.width=r.width+'px';ov.style.height=r.height+'px';}addEventListener('resize',fitOv);setTimeout(fitOv,50);

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><title>Rig Features Lab</title>
+<style>
+body{margin:0;background:#141821;color:#dde;font-family:system-ui,sans-serif}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 16px;background:#1d2230;font-size:13px}
+button{background:#2d6cdf;color:#fff;border:0;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer}
+canvas{display:block;margin:0 auto;max-width:100%;height:auto;align-self:flex-start}
+</style></head><body>
+<div class="bar"><b>Rig Features Lab</b> — ซ้าย = แบบเดิม · ขวา = ระบบใหม่ (แกะจาก Night Camp: knowledge/NIGHTCAMP_TEARDOWN.md)
+  <button id="pause">หยุด/เล่น</button></div>
+<canvas id="cv" width="1500" height="1000"></canvas>
+<script src="../engine/rig.js"></script>
+<script>
+// ตัวละคร hero2 ชุดเดียวกับ spring_demo
+const P='../assets/characters/hero2/parts/';
+const HERO2={spec:{head:{h:57.9,px:0.55,py:0.9},torso:{h:62.9,px:0.5,py:0.78},arm_upper:{h:28.3,px:0.5,py:0.226},arm_lower:{h:35.2,px:0.5,py:0.109},leg_upper:{h:34.9,px:0.5,py:0.183},leg_lower:{h:40.5,px:0.5,py:0.115}},
+  bones:{head:[2,-44],armF_u:[-13,-35],armB_u:[11,-34],armF_l:[0,19.2],armB_l:[0,19.2],weapon:[0,25.7],legF_u:[-8,-4],legB_u:[9,-4],legF_l:[0,25.1],legB_l:[0,25.1]},foot:57};
+const mk=(o={})=>({...RIG.loadOutfit(P,{gear:'../assets/weapons/greatsword/',parts:['head','torso'],boneParts:['armF_u','armF_l','armB_u','armB_l','legF_u','legF_l','legB_u','legB_l'],idleParts:{legF_l:'legF_l_front_toe'},hair:false,leg:null,...HERO2}),...o});
+const ch=(o)=>RIG.makeChar({scale:1.5,...o,outfit:mk(o.outfit||{})});
+const cv=document.getElementById('cv'),c=cv.getContext('2d');
+// ---------- ช่องทดสอบ ----------
+const CELLS=[];const cell=(x,y,w,h,title,sub,init,tick)=>CELLS.push({x,y,w,h,title,sub,S:init(),tick});
+const GY=y=>y+380; // พื้นของแต่ละช่อง (แถวบน)
+// 1) hit / lunge / aim
+cell(0,0,500,450,'1. ท่าตีมี hit · lunge · aim','ซ้าย: ฟันตรงทุกครั้ง · ขวา: หันตามเป้า (ลูกแก้ว) + พุ่งไปหน้า + ประกายตรงเฟรม hit',()=>{
+  const A=ch({x:120,y:GY(0),keepArmed:true,useAim:false,lunge:false}),B=ch({x:300,y:GY(0),keepArmed:true});
+  const S={A,B,fx:[],t:0,n:0};for(const h of[A,B])h.onEvent=(e,cl,who)=>{if(e!=='hit')return;const m=RIG.world(who.pose,who.outfit.bones).weapon,sc=who.scale,L=84*.86;
+    S.fx.push({x:who.x+who.dir*sc*(m.x+L*Math.sin(m.a)),y:who.y-57*sc+(who.pose.rootY||0)*sc*.5+sc*(m.y-L*Math.cos(m.a)),t:0});};return S;},
+ (S,dt)=>{S.t+=dt;const tx=430,ty=GY(0)-150-90*Math.sin(S.t*.7);S.tgt=[tx,ty];
+  const B=S.B,hy=B.y-57*B.scale-20;B.aim=Math.atan2(ty-hy,tx-B.x)*180/Math.PI;
+  if(!S.A.act&&!S.B.act){if(S.n%3===0){S.A.x=120;S.B.x=300;}const k='โจมตี '+(S.n%3+1)+(S.n%3===2?' (ปิดคอมโบ)':'');RIG.play(S.A,k);RIG.play(S.B,k);S.n++;}
+  for(const f of S.fx)f.t+=dt;S.fx=S.fx.filter(f=>f.t<.35);});
+// 2) ท่าค้างมีชีวิต
+cell(500,0,500,450,'2. ท่าค้างภาพเดียว → มีชีวิตเอง','ซ้าย: ค้างนิ่งเป็นรูปปั้น · ขวา: RIG.alive() หายใจ/หัวตามช้า/แขนลอย',()=>{
+  const A=ch({x:630,y:GY(0),alive:false}),B=ch({x:870,y:GY(0)});RIG.play(A,'ท่าค้าง: ชูดาบ');RIG.play(B,'ท่าค้าง: ชูดาบ');return {A,B};},()=>{});
+// 3) กำปั้น 3 ชั้น (ซูม)
+cell(1000,0,500,450,'3. แขนหน้า 3 ชั้น: ดาบอยู่ในกำมือ','ซ้าย: ดาบทับทั้งมือ (เดิม) · ขวา: ปลายแขน → ดาบ → กำปั้น (ซูม 2.6x)',()=>{
+  const A=ch({x:1130,y:GY(0)+30,scale:2.6,keepArmed:true,outfit:{fist:false}}),B=ch({x:1370,y:GY(0)+30,scale:2.6,keepArmed:true});A.armed=B.armed=1e9;A.dir=B.dir=1;return {A,B,crop:true};},()=>{});
+// 4) IK เท้า
+cell(0,450,500,550,'4a. IK เท้า: ย่อตัวแล้วเข่างอเอง','ซ้าย: ย่อ = ทั้งตัวจมดิน · ขวา: เท้าปักพื้น (RIG.ik2)',()=>{
+  const A=ch({x:130,y:900}),B=ch({x:350,y:900,footIK:true});return {A,B,t:0};},
+ (S,dt)=>{S.t+=dt;const d=(1-Math.cos(S.t*1.6))*.5*40;S.A.add=S.B.add={rootY:d};S.crouch=d;});
+// 4b+5) ผม/ผ้า + ตระกูลอาวุธ
+const scarf=()=>[{at:'torso',off:[-6,-40],rest:75,n:7,len:9,visc:.6,stiff:55,damp:.9,grav:380,w0:15,w1:9,col:'#c0392b',line:'#3a1414'},
+                 {at:'head',off:[-20,-28],rest:45,n:6,len:9,visc:.5,stiff:70,damp:.88,grav:300,w0:14,w1:4,col:'#6b4026',line:'#24140c'}];
+cell(500,450,1000,250,'4b. ผม/ผ้าเป็นโซ่สปริง 3 ค่า (ความหนืด · ความแข็ง · การหน่วง)','ซ้าย: ไม่มี · ขวา: ผ้าพันคอ + หางผม ไหวเองตอนวิ่ง/หยุด',()=>{
+  const A=ch({x:620,y:665,scale:1.1}),B=ch({x:1050,y:665,scale:1.1,chains:scarf()});return {A,B,t:0,ox:[620,1050]};},
+ (S,dt)=>{S.t+=dt;const ph=S.t%4,mv=ph<2.4,v=mv?Math.cos(ph/2.4*Math.PI*2)*230:0;S.mv=mv;
+  [S.A,S.B].forEach((h,i)=>{h.x+=v*dt;if(Math.abs(v)>1)h.dir=v>0?1:-1;h.x=Math.max(S.ox[i]-150,Math.min(S.ox[i]+170,h.x));});});
+const FAMS=Object.keys(RIG.FAMILY),PH=['ยืน','เดิน','วิ่ง','atk1','atk2','atk3'];
+cell(500,700,1000,300,'5. ตระกูลการถืออาวุธ: ท่ายืน · เดิน · วิ่ง · ตี 1-3 ต่อตระกูล','อาวุธใหม่แค่บอกว่าอยู่ตระกูลไหน → ได้ท่าครบชุด (อาวุธที่ยังไม่มีภาพวาดด้วยรูปทรงชั่วคราว)',()=>{
+  const H=FAMS.map((f,i)=>ch({x:575+i*165,y:960,scale:.95,family:f,keepArmed:true}));H.forEach(h=>h.armed=1e9);return {H,t:0,ph:0,pt:0};},
+ (S,dt)=>{S.pt+=dt;const cur=PH[S.ph];
+  if(S.ph<3){if(S.pt>2.2){S.ph++;S.pt=0;}}else if(S.H.every(h=>!h.act)&&S.pt>.15){if(S.started){S.ph=(S.ph+1)%PH.length;S.pt=0;S.started=false;}}
+  if(S.ph>=3&&!S.started){S.H.forEach(h=>RIG.play(h,PH[S.ph]));S.started=true;}
+  S.mv=S.ph===1?'walk':S.ph===2?true:false;S.label=PH[S.ph];S.H.forEach(h=>{h.armed=1e9;});});
+// ---------- วาด ----------
+let paused=false,last=performance.now(),T=0;document.getElementById('pause').onclick=()=>paused=!paused;
+function frame(dt){T+=dt;c.fillStyle='#141821';c.fillRect(0,0,cv.width,cv.height);
+  for(const C of CELLS){const S=C.S;C.tick(S,dt);
+    const list=S.H||[S.A,S.B];for(const h of list){const mv=S.H?S.mv:(C.title.startsWith('4b')?S.mv:false);RIG.update(h,dt,mv);}
+    c.save();c.beginPath();c.rect(C.x+4,C.y+4,C.w-8,C.h-8);c.clip();c.fillStyle='#1c2231';c.fillRect(C.x,C.y,C.w,C.h);
+    const gy=S.H?960:C.title.startsWith('4b')?665:C.title.startsWith('4a')?900:GY(C.y)+(S.crop?30:0);
+    c.fillStyle='#283247';c.fillRect(C.x,gy,C.w,C.h);c.strokeStyle='#7fe08a';c.lineWidth=2;c.beginPath();c.moveTo(C.x,gy);c.lineTo(C.x+C.w,gy);c.stroke();
+    if(!S.H){c.strokeStyle='#3a4560';c.setLineDash([6,6]);c.beginPath();c.moveTo(C.x+C.w/2,C.y+60);c.lineTo(C.x+C.w/2,C.y+C.h);c.stroke();c.setLineDash([]);}
+    if(S.tgt){c.fillStyle='#ffd166';c.beginPath();c.arc(S.tgt[0],S.tgt[1],10,0,7);c.fill();}
+    if(S.crouch!=null){c.fillStyle='#aab';c.font='12px system-ui';c.fillText('ย่อตัว '+S.crouch.toFixed(0),C.x+14,C.y+C.h-14);}
+    for(const h of list)RIG.draw(c,h);
+    if(S.fx)for(const f of S.fx){const k=1-f.t/.35;c.save();c.globalCompositeOperation='lighter';c.fillStyle=`rgba(255,220,120,${k})`;c.beginPath();c.arc(f.x,f.y,8+30*(1-k),0,7);c.fill();
+      c.font='bold 18px system-ui';c.fillText('HIT',f.x+10,f.y-14);c.restore();}
+    if(S.H){c.font='bold 13px system-ui';c.fillStyle='#ffd166';c.textAlign='center';S.H.forEach((h,i)=>c.fillText(RIG.FAMILY[h.family].name,h.x,gy+26));
+      c.fillStyle='#7fe08a';c.font='bold 16px system-ui';c.fillText('ท่า: '+S.label,C.x+C.w-70,C.y+60);c.textAlign='left';}
+    c.restore();
+    c.fillStyle='#fff';c.font='bold 17px system-ui';c.fillText(C.title,C.x+14,C.y+28);c.fillStyle='#9aa6c0';c.font='12.5px system-ui';c.fillText(C.sub,C.x+14,C.y+48);
+    c.strokeStyle='#3a4560';c.lineWidth=1;c.strokeRect(C.x+.5,C.y+.5,C.w-1,C.h-1);}}
+window.__lab={frame,CELLS};
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!paused&&!window.__lab.manual)frame(dt);requestAnimationFrame(loop);}requestAnimationFrame(loop);
+</script></body></html>

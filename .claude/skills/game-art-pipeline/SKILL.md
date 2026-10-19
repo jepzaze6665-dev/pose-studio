@@ -55,6 +55,10 @@ description: วิธีทำงานภาพเกม 2D ของโปร
 - AI ชอบวาด "หมุดหุ่น" บนหัวชิ้น → `python tools/strip_pegs.py <parts...>` (เก็บต้นฉบับ `_peg.png`); ลำตัวตัดแค่ส่วนแคบพอ (หัวบังคออยู่แล้ว) ไม่งั้นปกคอหาย
 - แก้ภาพชิ้นส่วนแล้วเปลี่ยนเลข `?r=N` ใน `loadSet()` ของ rig_lab (แคชภาพ)
 
+- ระบบใหม่ใน engine (แกะ Night Camp, ทดสอบที่ `rig/features_lab.html`): `clip.hit/lunge/aim`, `clip.shot`+`RIG.alive`, ชั้นกำปั้น (`ORDER_FIST`, `fistCut`), `footIK`/`RIG.ik2`, `ch.chains` (visc/stiff/damp), `RIG.FAMILY` — ท่าตระกูลเขียนด้วย `blade` (มุมใบในโลก 0=ขึ้น 90=หน้า) อย่าเขียนมุม weapon ตรงๆ
+- หน้า lab: ทดสอบด้วย `__lab.manual=true` แล้วเรียก `__lab.frame(1/60)` วนเอง (rAF ทำให้ภาพไม่ตรงเวลา) · ไม่มีฟอนต์ไทยในเครื่อง → ข้อความบนภาพสรุปที่ทำด้วย PIL ใช้อังกฤษ
+- Auto-rig (`engine/autorig.js`): ส่วนที่ทับกันในภาพแยกน้ำหนักไม่ได้ → จำกัดมุมหมุน หรือเจนส่วนที่ทับเป็นชิ้นแยก
+
 ## 6. VFX (`vfx/*.html`, `vfx/vfx_runtime.js`)
 - สองทาง: **procedural** (noise/voronoi + พารามิเตอร์ ดูวาดมือแต่โค้ดวาด — หลัก 11) หรือ **sprite sequence** (§4.5 + `cut_grid.py`)
 - ความมันส์ = feedback ซ้อนชั้น: ตัวเลขดาเมจ + TOTAL คอมโบ, impact frame 1–3 เฟรม, hit-stop, สีประจำอาชีพ → VFX ชุดเดียว tint หลายสาย (หลัก 15)
